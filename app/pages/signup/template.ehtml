@@ -1,0 +1,104 @@
+import "./style.css";
+import { redirect, ValidationError } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { signup, MIN_PASSWORD, SignupForm } from "#app/shared/services/auth";
+import { PublicLayout } from "#app/shared/templates/public-layout";
+import { zoneName } from "#app/shared/lib/time";
+
+interface SignupState {
+  form: SignupForm;
+  errors: Record<string, string[]>;
+  error: string;
+  busy: boolean;
+}
+
+function onInit(state: SignupState) {
+  state.form.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
+
+function onSubmit(state: SignupState) {
+  state.busy = true;
+  try {
+    signup(state.form);
+    redirect("/meeting-types");
+  } catch (err: any) {
+    if (err instanceof ValidationError && err.errors) {
+      state.errors = err.errors as Record<string, string[]>;
+      state.error = "";
+    } else {
+      state.errors = {};
+      state.error = err.message;
+    }
+
+    state.busy = false;
+  }
+}
+
+<html lang="en" class="page-signup" (
+  private state: SignupState = {
+    form: { name: "", email: "", password: "", timeZone: "UTC" },
+    errors: {},
+    error: "",
+    busy: false,
+  },
+) oninit={() => onInit(state)}>
+  <head>
+    <title>Create your booking page · slotnook</title>
+    <meta name="description" content="Create a slotnook host account and share your booking page.">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <PublicLayout width="is-narrow">
+      <div class="stack is-lg">
+        <div class="stack is-xs">
+          <h1>Create your booking page</h1>
+          <p class="lede">We start you with a 30 minute meeting and weekday hours. Change both after.</p>
+        </div>
+
+        <form class="card card-body stack" onsubmit={() => onSubmit(state)}>
+          <p e:if={state.error} class="error" role="alert">{state.error}</p>
+
+          <div class="field">
+            <label for="name">Your name</label>
+            <input id="name" name="name" value={state.form.name} autocomplete="name" class={[state.errors.name && "is-error"]} required>
+            <p e:if={state.errors.name} class="error">{state.errors.name?.[0]}</p>
+          </div>
+
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email"
+                   name="email"
+                   type="email"
+                   value={state.form.email}
+                   autocomplete="email"
+                   autocapitalize="none"
+                   spellcheck={false}
+                   class={[state.errors.email && "is-error"]}
+                   required>
+            <p e:if={state.errors.email} class="error">{state.errors.email?.[0]}</p>
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password"
+                   name="password"
+                   type="password"
+                   value={state.form.password}
+                   autocomplete="new-password"
+                   minlength={MIN_PASSWORD}
+                   class={[state.errors.password && "is-error"]}
+                   required>
+            <p e:if={state.errors.password} class="error">{state.errors.password?.[0]}</p>
+            <p e:else class="hint">At least {MIN_PASSWORD} characters</p>
+          </div>
+
+          <p class="hint">Time zone: {zoneName(state.form.timeZone)}. You can change it under Availability.</p>
+
+          <button type="submit" class="is-primary is-block" disabled={state.busy}>Create account</button>
+
+          <p class="hint">Have an account? <a href="/signin">Sign in</a></p>
+        </form>
+      </div>
+    </PublicLayout>
+  </body>
+</html>

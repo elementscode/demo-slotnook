@@ -1,0 +1,153 @@
+import "./style.css";
+import type { Listener } from "@elements/app";
+import { ValidationError } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Host, MeetingType, SlotChange, bookSlot } from "#app/shared/services/scheduling";
+import { PublicLayout } from "#app/shared/templates/public-layout";
+import { MeetingSummary } from "#app/shared/templates/meeting-summary";
+import { SlotPicker, Pick } from "#app/shared/templates/slot-picker";
+import { formatShortDay, formatTime } from "#app/shared/lib/time";
+
+interface GuestForm {
+  guestName: string;
+  guestEmail: string;
+  guestNote: string;
+  errors: Record<string, string[]>;
+  error: string;
+  busy: boolean;
+  token: string;
+  bookedAt: Date | null;
+}
+
+function onBook(form: GuestForm, pick: Pick, type: MeetingType) {
+  if (!pick.startsAt) {
+    return;
+  }
+
+  form.busy = true;
+  try {
+    let result = bookSlot({
+      meetingTypeId: type.id,
+      startsAt: pick.startsAt,
+      guestName: form.guestName,
+      guestEmail: form.guestEmail,
+      guestNote: form.guestNote,
+      guestTimeZone: pick.timeZone,
+    });
+
+    form.bookedAt = pick.startsAt;
+    form.token = result.token;
+    form.errors = {};
+    form.error = "";
+  } catch (err: any) {
+    if (err instanceof ValidationError && err.errors) {
+      form.errors = err.errors as Record<string, string[]>;
+      form.error = "";
+    } else {
+      form.errors = {};
+      form.error = err.message;
+      pick.startsAt = null;
+      pick.notice = err.message;
+    }
+  }
+
+  form.busy = false;
+}
+
+<html lang="en" class="page-book" (
+  host: Host,
+  type: MeetingType,
+  slots: Date[],
+  listener: Listener<SlotChange>,
+  private pick: Pick = { startsAt: null, timeZone: host.timeZone, notice: "" },
+  private form: GuestForm = {
+    guestName: "",
+    guestEmail: "",
+    guestNote: "",
+    errors: {},
+    error: "",
+    busy: false,
+    token: "",
+    bookedAt: null,
+  },
+)>
+  <head>
+    <title>{type.name} with {host.name} · slotnook</title>
+    <meta name="description" content={`Book a ${type.name.toLowerCase()} with ${host.name}.`}>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <PublicLayout>
+      <div class="card booking-card">
+        <aside class="booking-aside">
+          <MeetingSummary {host} {type} startsAt={form.bookedAt ?? pick.startsAt} timeZone={pick.timeZone} />
+        </aside>
+
+        <div class="booking-main">
+          <div e:if={form.token} class="booking-done stack">
+            <span class="booking-check" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <h2>You're booked</h2>
+            <p>A confirmation with a calendar invite is on its way to <strong>{form.guestEmail}</strong>. It has links to reschedule or cancel if plans change.</p>
+            <div class="cluster">
+              <a class="button is-primary" href={`/booking/${form.token}`}>View booking</a>
+              <a class="button is-ghost" href={`/${host.slug}`}>More with {host.name.split(" ")[0]}</a>
+            </div>
+          </div>
+
+          <div e:else class="stack is-lg">
+            <div class={["stack", pick.startsAt && "hidden"]}>
+              <h2>Pick a day and time</h2>
+              <p e:if={pick.notice} class="callout is-warning" role="status">{pick.notice}</p>
+              <SlotPicker meetingTypeId={type.id}
+                          durationMinutes={type.durationMinutes}
+                          bufferMinutes={type.bufferMinutes}
+                          {slots}
+                          {listener}
+                          {pick} />
+            </div>
+
+            <form e:if={pick.startsAt} class="booking-form stack" onsubmit={() => onBook(form, pick, type)}>
+              <h2>Your details</h2>
+
+              <div class="booking-picked row">
+                <span>{formatShortDay(pick.startsAt!, pick.timeZone)} at {formatTime(pick.startsAt!, pick.timeZone)}</span>
+                <button type="button" class="is-ghost is-sm" onclick={() => pick.startsAt = null}>Change</button>
+              </div>
+
+              <p e:if={form.error} class="error" role="alert">{form.error}</p>
+
+              <div class="field">
+                <label for="guest-name">Name</label>
+                <input id="guest-name" name="name" autocomplete="name" value={form.guestName} class={[form.errors.guestName && "is-error"]} required>
+                <p e:if={form.errors.guestName} class="error">{form.errors.guestName?.[0]}</p>
+              </div>
+
+              <div class="field">
+                <label for="guest-email">Email</label>
+                <input id="guest-email"
+                       name="email"
+                       type="email"
+                       autocomplete="email"
+                       autocapitalize="none"
+                       spellcheck={false}
+                       value={form.guestEmail}
+                       class={[form.errors.guestEmail && "is-error"]}
+                       required>
+                <p e:if={form.errors.guestEmail} class="error">{form.errors.guestEmail?.[0]}</p>
+              </div>
+
+              <div class="field">
+                <label for="guest-note">Anything {host.name.split(" ")[0]} should know? <span class="text-ink-dim">(optional)</span></label>
+                <textarea id="guest-note" name="note" rows={3} value={form.guestNote}></textarea>
+              </div>
+
+              <button type="submit" class="is-primary is-lg" disabled={form.busy}>Confirm booking</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </PublicLayout>
+  </body>
+</html>

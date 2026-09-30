@@ -1,0 +1,187 @@
+import "./style.css";
+import type { Listener } from "@elements/app";
+import { session, sql } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Host, SlotChange, hostCancel } from "#app/shared/services/scheduling";
+import { HostLayout } from "#app/shared/templates/host-layout";
+import { dayKey, formatDay, formatTime, zoneName, zoneAbbr } from "#app/shared/lib/time";
+
+export interface HostBooking {
+  id: string;
+  startsAt: Date;
+  endsAt: Date;
+  status: "confirmed" | "cancelled";
+  guestName: string;
+  guestEmail: string;
+  guestNote: string;
+  guestTimeZone: string;
+  meetingName: string;
+  createdAt: Date;
+}
+
+interface DayGroup {
+  id: string;
+  label: string;
+  bookings: HostBooking[];
+}
+
+interface BookingsView {
+  tab: "upcoming" | "past";
+  confirming: string;
+  error: string;
+  seen: string[];
+}
+
+export function loadHostBookings(hostId: string): HostBooking[] {
+  return sql<HostBooking>(`
+    select b.id, b.startsAt, b.endsAt, b.status, b.guestName, b.guestEmail, b.guestNote,
+           b.guestTimeZone, b.createdAt, m.name as meetingName
+      from bookings b
+      join meetingTypes m on m.id = b.meetingTypeId
+     where b.userId = ${hostId}
+       and b.startsAt > now() - interval '90 days'
+     order by b.startsAt
+  `).all();
+}
+
+/** @rpc */
+export function fetchMyBookings(): HostBooking[] {
+  return loadHostBookings(session.getOrThrow("userId"));
+}
+
+function isUpcoming(b: HostBooking): boolean {
+  return b.status === "confirmed" && b.endsAt.getTime() > Date.now();
+}
+
+function groupByDay(bookings: HostBooking[], tab: BookingsView["tab"], timeZone: string): DayGroup[] {
+  let list = tab === "upcoming"
+    ? bookings.filter(isUpcoming)
+    : bookings.filter((b) => !isUpcoming(b)).reverse();
+
+  let groups: DayGroup[] = [];
+  for (let b of list) {
+    let key = dayKey(b.startsAt, timeZone);
+    let last = groups[groups.length - 1];
+    if (last && last.id === key) {
+      last.bookings.push(b);
+    } else {
+      groups.push({ id: key, label: formatDay(b.startsAt, timeZone), bookings: [b] });
+    }
+  }
+
+  return groups;
+}
+
+function countUpcoming(bookings: HostBooking[]): number {
+  return bookings.filter(isUpcoming).length;
+}
+
+function onChange(live: { bookings: HostBooking[] }, view: BookingsView) {
+  let known = new Set(live.bookings.map((b) => b.id));
+  live.bookings = fetchMyBookings();
+  view.seen = live.bookings.filter((b) => !known.has(b.id)).map((b) => b.id);
+}
+
+function onCancel(b: HostBooking, view: BookingsView) {
+  try {
+    hostCancel(b.id);
+    b.status = "cancelled";
+    view.confirming = "";
+    view.error = "";
+  } catch (err: any) {
+    view.error = err.message;
+  }
+}
+
+function statusLabel(b: HostBooking): string {
+  if (b.status === "cancelled") {
+    return "Cancelled";
+  }
+
+  return b.endsAt.getTime() > Date.now() ? "Confirmed" : "Completed";
+}
+
+<html lang="en" class="page-bookings" (
+  host: Host,
+  bookings: HostBooking[],
+  listener: Listener<SlotChange>,
+  private live: { bookings: HostBooking[] } = { bookings },
+  private view: BookingsView = { tab: "upcoming" as BookingsView["tab"], confirming: "", error: "", seen: [] },
+) oninit={() => listener.on("notify", () => onChange(live, view))}>
+  <head>
+    <title>Bookings · slotnook</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <HostLayout active="bookings">
+      <div class="stack is-lg">
+        <div class="bookings-head row">
+          <div class="stack is-xs">
+            <h1>Bookings</h1>
+            <p class="hint">Times in {zoneName(host.timeZone)} ({zoneAbbr(new Date(), host.timeZone)})</p>
+          </div>
+          <div class="share-link row">
+            <span>Your page</span>
+            <a class="button is-sm" href={`/${host.slug}`} target="_blank">/{host.slug}</a>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <div class="tab-list" role="tablist">
+            <button role="tab" aria-selected={view.tab === "upcoming"} class={["tab", view.tab === "upcoming" && "is-active"]} onclick={() => view.tab = "upcoming"}>
+              Upcoming <span class="pill">{countUpcoming(live.bookings)}</span>
+            </button>
+            <button role="tab" aria-selected={view.tab === "past"} class={["tab", view.tab === "past" && "is-active"]} onclick={() => view.tab = "past"}>
+              Past and cancelled
+            </button>
+          </div>
+
+          <div class="tab-panel stack is-lg" role="tabpanel">
+            <p e:if={view.error} class="error" role="alert">{view.error}</p>
+
+            <div e:for={group of groupByDay(live.bookings, view.tab, host.timeZone)} class="day-group stack">
+              <h2 class="day-label">{group.label}</h2>
+              <div class="card">
+                <div e:for={b of group.bookings}
+                     class={["booking-row", b.status === "cancelled" && "is-cancelled", view.seen.includes(b.id) && "is-new"]}>
+                  <div class="booking-time">
+                    {formatTime(b.startsAt, host.timeZone)}
+                    <small>to {formatTime(b.endsAt, host.timeZone)}</small>
+                  </div>
+
+                  <div class="booking-who stack">
+                    <div class="cluster is-sm">
+                      <strong>{b.guestName}</strong>
+                      <span class={["pill", b.status === "cancelled" ? "is-danger" : (isUpcoming(b) ? "is-success" : "")]}>{statusLabel(b)}</span>
+                    </div>
+                    <span class="booking-meta">{b.meetingName} · <a href={`mailto:${b.guestEmail}`}>{b.guestEmail}</a></span>
+                    <span e:if={formatTime(b.startsAt, b.guestTimeZone) !== formatTime(b.startsAt, host.timeZone)} class="booking-meta">
+                      {formatTime(b.startsAt, b.guestTimeZone)} for them in {zoneName(b.guestTimeZone)}
+                    </span>
+                    <p e:if={b.guestNote} class="booking-note">{b.guestNote}</p>
+                  </div>
+
+                  <div e:if={isUpcoming(b)} class="booking-actions row">
+                    <div e:if={view.confirming === b.id} class="row gap-2">
+                      <button class="is-danger is-sm" onclick={() => onCancel(b, view)}>Cancel and email guest</button>
+                      <button class="is-ghost is-sm" onclick={() => view.confirming = ""}>Keep</button>
+                    </div>
+                    <div e:else class="row gap-2">
+                      <a class="button is-sm" href={`/bookings/${b.id}/reschedule`}>Reschedule</a>
+                      <button class="is-ghost is-sm" onclick={() => view.confirming = b.id}>Cancel</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div e:if={groupByDay(live.bookings, view.tab, host.timeZone).length === 0} class="card empty">
+              <p e:if={view.tab === "upcoming"}>Nothing booked yet. Share <a href={`/${host.slug}`} target="_blank">your booking page</a> to get started.</p>
+              <p e:else>No past bookings yet.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </HostLayout>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+@import "#app/shared/styles/page.css";
+
+.page-signin .auth-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.page-signin .auth-intro {
+  grid-column: 1 / -1;
+}
+
+.page-signin .auth-intro h1 {
+  margin: 0;
+}
+
+.page-signin .demo-host {
+  gap: var(--space-3);
+  justify-content: space-between;
+  padding-block: var(--space-3);
+}
+
+.page-signin .demo-host + .demo-host {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.page-signin .demo-host-name {
+  font-weight: var(--weight-semibold);
+}
+
+.page-signin .demo-host-meta {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.page-signin .demo-password {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+@media (max-width: 48rem) {
+  .page-signin .auth-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.page-signin .auth-grid > * {
+  margin-block: 0;
+}

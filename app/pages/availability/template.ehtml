@@ -1,0 +1,365 @@
+import "./style.css";
+import { session, sql, tx, ValidationError } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Host, notifyHoursChanged } from "#app/shared/services/scheduling";
+import { HostLayout } from "#app/shared/templates/host-layout";
+import { allTimeZones, isTimeZone, zoneName } from "#app/shared/lib/time";
+
+export interface HoursWindow {
+  id: string;
+  start: string;
+  end: string;
+}
+
+export interface DayHours {
+  id: string;
+  weekday: number;
+  label: string;
+  on: boolean;
+  windows: HoursWindow[];
+}
+
+export interface Override {
+  id: string;
+  date: string;
+  startTime: string | null;
+  endTime: string | null;
+}
+
+export interface OverrideForm {
+  date: string;
+  allDay: boolean;
+  start: string;
+  end: string;
+}
+
+interface HoursView {
+  timeZone: string;
+  saved: string;
+  error: string;
+  busy: boolean;
+}
+
+// Monday first, the way a working week reads.
+const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const ZONES = allTimeZones().map((z) => ({ id: z, label: zoneName(z) }));
+
+function newWindow(start: string, end: string): HoursWindow {
+  return { id: crypto.randomUUID(), start, end };
+}
+
+export function loadWeek(userId: string): DayHours[] {
+  let rules = sql<{ weekday: number; startTime: string; endTime: string }>(`
+    select weekday, startTime::text, endTime::text from availabilityRules where userId = ${userId} order by startTime
+  `).all();
+
+  return WEEKDAYS.map((weekday) => {
+    let windows = rules
+      .filter((r) => r.weekday === weekday)
+      .map((r) => newWindow(r.startTime.slice(0, 5), r.endTime.slice(0, 5)));
+
+    return { id: String(weekday), weekday, label: DAY_NAMES[weekday], on: windows.length > 0, windows };
+  });
+}
+
+export function loadOverrides(userId: string): Override[] {
+  return sql<Override>(`
+    select id, date::text, startTime::text, endTime::text
+      from dateOverrides
+     where userId = ${userId}
+       and date >= (now() at time zone (select timeZone from users where id = ${userId}))::date
+     order by date, startTime nulls first
+  `).all();
+}
+
+function checkWindow(start: string, end: string): string {
+  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) {
+    return "Enter a start and end time";
+  }
+
+  if (end <= start) {
+    return "End time must be after start time";
+  }
+
+  return "";
+}
+
+/** @rpc */
+export function saveHours(timeZone: string, week: DayHours[]) {
+  let userId = session.getOrThrow("userId");
+  if (!isTimeZone(timeZone)) {
+    throw new ValidationError("Pick a time zone from the list");
+  }
+
+  for (let day of week) {
+    if (!day.on) {
+      continue;
+    }
+
+    let sorted = [...day.windows].sort((a, b) => a.start.localeCompare(b.start));
+    for (let i = 0; i < sorted.length; i++) {
+      let problem = checkWindow(sorted[i].start, sorted[i].end);
+      if (problem) {
+        throw new ValidationError(`${day.label}: ${problem.toLowerCase()}`);
+      }
+
+      if (i > 0 && sorted[i].start < sorted[i - 1].end) {
+        throw new ValidationError(`${day.label}: the hours overlap`);
+      }
+    }
+  }
+
+  tx(() => {
+    sql(`update users set timeZone = ${timeZone} where id = ${userId}`);
+    sql(`delete from availabilityRules where userId = ${userId}`);
+    for (let day of week) {
+      if (!day.on) {
+        continue;
+      }
+
+      for (let w of day.windows) {
+        sql(`
+          insert into availabilityRules (userId, weekday, startTime, endTime)
+               values (${userId}, ${day.weekday}, ${w.start}::time, ${w.end}::time)
+        `);
+      }
+    }
+  });
+
+  notifyHoursChanged(userId);
+}
+
+/** @rpc */
+export function saveOverride(form: OverrideForm): Override[] {
+  let userId = session.getOrThrow("userId");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(form.date)) {
+    throw new ValidationError("Pick a date");
+  }
+
+  if (!form.allDay) {
+    let problem = checkWindow(form.start, form.end);
+    if (problem) {
+      throw new ValidationError(problem);
+    }
+  }
+
+  tx(() => {
+    sql(`delete from dateOverrides where userId = ${userId} and date = ${form.date}::date`);
+    sql(`
+      insert into dateOverrides (userId, date, startTime, endTime)
+           values (${userId}, ${form.date}::date, ${form.allDay ? null : form.start}::time, ${form.allDay ? null : form.end}::time)
+    `);
+  });
+
+  notifyHoursChanged(userId);
+
+  return loadOverrides(userId);
+}
+
+/** @rpc */
+export function removeOverride(date: string): Override[] {
+  let userId = session.getOrThrow("userId");
+  sql(`delete from dateOverrides where userId = ${userId} and date = ${date}::date`);
+  notifyHoursChanged(userId);
+
+  return loadOverrides(userId);
+}
+
+function onToggleDay(day: DayHours) {
+  if (day.on && day.windows.length === 0) {
+    day.windows.push(newWindow("09:00", "17:00"));
+  }
+}
+
+function onAddWindow(day: DayHours) {
+  let last = day.windows[day.windows.length - 1];
+  let start = last ? last.end : "09:00";
+  let [h, m] = start.split(":").map(Number);
+  let end = `${String(Math.min(h + 1, 23)).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  day.windows.push(newWindow(start, end <= start ? "23:59" : end));
+}
+
+function onRemoveWindow(day: DayHours, w: HoursWindow) {
+  day.windows = day.windows.filter((x) => x.id !== w.id);
+  if (day.windows.length === 0) {
+    day.on = false;
+  }
+}
+
+function onSaveHours(view: HoursView, week: DayHours[]) {
+  view.busy = true;
+  try {
+    saveHours(view.timeZone, week);
+    view.error = "";
+    view.saved = "Saved. Your booking pages already show the new hours.";
+    setTimeout(() => view.saved = "", 3000);
+  } catch (err: any) {
+    view.error = err.message;
+    view.saved = "";
+  }
+
+  view.busy = false;
+}
+
+function onAddOverride(form: OverrideForm, live: { overrides: Override[]; error: string }) {
+  try {
+    live.overrides = saveOverride(form);
+    live.error = "";
+    form.date = "";
+  } catch (err: any) {
+    live.error = err.message;
+  }
+}
+
+function onRemoveOverride(date: string, live: { overrides: Override[]; error: string }) {
+  live.overrides = removeOverride(date);
+}
+
+interface OverrideDay {
+  id: string;
+  date: string;
+  label: string;
+  hours: string;
+}
+
+function formatClock(t: string): string {
+  let [h, m] = t.split(":").map(Number);
+  let suffix = h >= 12 ? "PM" : "AM";
+
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${suffix}`;
+}
+
+function overrideDays(overrides: Override[]): OverrideDay[] {
+  let days: OverrideDay[] = [];
+  for (let o of overrides) {
+    let hours = o.startTime && o.endTime ? `${formatClock(o.startTime)} – ${formatClock(o.endTime)}` : "Unavailable";
+    let existing = days.find((d) => d.date === o.date);
+    if (existing) {
+      existing.hours += `, ${hours}`;
+      continue;
+    }
+
+    let [y, m, d] = o.date.split("-").map(Number);
+    let label = new Intl.DateTimeFormat("en-US", { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" })
+      .format(new Date(Date.UTC(y, m - 1, d)));
+    days.push({ id: o.date, date: o.date, label, hours });
+  }
+
+  return days;
+}
+
+<html lang="en" class="page-availability" (
+  host: Host,
+  week: DayHours[],
+  overrides: Override[],
+  private view: HoursView = { timeZone: host.timeZone, saved: "", error: "", busy: false },
+  private live: { overrides: Override[]; error: string } = { overrides, error: "" },
+  private overrideForm: OverrideForm = { date: "", allDay: true, start: "09:00", end: "12:00" },
+)>
+  <head>
+    <title>Availability · slotnook</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <HostLayout active="availability">
+      <div class="availability-col stack is-lg">
+        <div class="stack is-xs">
+          <h1>Availability</h1>
+          <p class="hint">When guests can book you. Buffers come from each meeting type.</p>
+        </div>
+
+        <form class="card" onsubmit={() => onSaveHours(view, week)}>
+          <div class="card-head">
+            <h2>Weekly hours</h2>
+          </div>
+
+          <div class="card-body stack">
+            <div class="field">
+              <label for="tz">Time zone</label>
+              <select id="tz" value={view.timeZone}>
+                <option e:for={z of ZONES} value={z.id}>{z.label}</option>
+              </select>
+              <p class="hint">Your hours are in this zone. Guests see times in their own.</p>
+            </div>
+
+            <div>
+              <div e:for={day of week} class="day-row">
+                <label class="day-toggle row">
+                  <input type="checkbox" checked={day.on} onchange={() => onToggleDay(day)}>
+                  {day.label}
+                </label>
+
+                <div e:if={day.on} class="stack is-sm">
+                  <div e:for={w of day.windows} class="window row">
+                    <input type="time" class="is-sm" value={w.start} aria-label={`${day.label} start`} step={900}>
+                    <span class="window-dash">–</span>
+                    <input type="time" class="is-sm" value={w.end} aria-label={`${day.label} end`} step={900}>
+                    <button type="button" class="is-ghost is-sm icon-button" aria-label="Remove these hours" onclick={() => onRemoveWindow(day, w)}>
+                      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
+                    </button>
+                  </div>
+                  <div>
+                    <button type="button" class="is-ghost is-sm" onclick={() => onAddWindow(day)}>+ Add hours</button>
+                  </div>
+                </div>
+
+                <span e:else class="day-off">Unavailable</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-foot row save-row">
+            <span e:if={view.error} class="error" role="alert">{view.error}</span>
+            <span e:if={view.saved} class="saved" role="status">{view.saved}</span>
+            <button type="submit" class="is-primary" disabled={view.busy}>Save hours</button>
+          </div>
+        </form>
+
+        <section class="card">
+          <div class="card-head">
+            <h2>Date overrides</h2>
+            <p class="hint">Take a day off, or set different hours for one date.</p>
+          </div>
+
+          <div class="card-body stack">
+            <div e:if={live.overrides.length}>
+              <div e:for={d of overrideDays(live.overrides)} class="override-row row">
+                <div class="stack is-xs">
+                  <span class="override-date">{d.label}</span>
+                  <span class="override-hours">{d.hours}</span>
+                </div>
+                <button class="is-ghost is-sm" onclick={() => onRemoveOverride(d.date, live)}>Remove</button>
+              </div>
+            </div>
+            <p e:else class="hint">No overrides. Your weekly hours apply every week.</p>
+
+            <form class="override-form cluster" onsubmit={() => onAddOverride(overrideForm, live)}>
+              <div class="field">
+                <label for="override-date">Date</label>
+                <input id="override-date" type="date" value={overrideForm.date} required>
+              </div>
+
+              <div class="field">
+                <label for="override-kind">Hours</label>
+                <label class="all-day row gap-2">
+                  <input id="override-kind" type="checkbox" checked={overrideForm.allDay}> Unavailable all day
+                </label>
+              </div>
+
+              <div e:if={!overrideForm.allDay} class="window row">
+                <input type="time" value={overrideForm.start} aria-label="Override start" step={900}>
+                <span class="window-dash">–</span>
+                <input type="time" value={overrideForm.end} aria-label="Override end" step={900}>
+              </div>
+
+              <button type="submit">Add override</button>
+            </form>
+
+            <p e:if={live.error} class="error" role="alert">{live.error}</p>
+          </div>
+        </section>
+      </div>
+    </HostLayout>
+  </body>
+</html>

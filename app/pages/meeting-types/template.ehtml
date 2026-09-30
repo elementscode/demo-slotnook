@@ -1,0 +1,252 @@
+import "./style.css";
+import { session, sql, ValidationError } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Host, MeetingType, notifyHoursChanged } from "#app/shared/services/scheduling";
+import { slugify } from "#app/shared/services/auth";
+import { HostLayout } from "#app/shared/templates/host-layout";
+import { formatDuration } from "#app/shared/lib/time";
+
+export interface MeetingTypeForm {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  duration: string;
+  buffer: string;
+  active: boolean;
+}
+
+interface TypesView {
+  editing: string;
+  form: MeetingTypeForm;
+  errors: Record<string, string[]>;
+  busy: boolean;
+  copied: string;
+}
+
+export const DURATIONS = [15, 20, 30, 45, 60, 90, 120].map((m) => ({ id: String(m), minutes: m }));
+export const BUFFERS = [0, 5, 10, 15, 30, 60].map((m) => ({ id: String(m), minutes: m }));
+
+export function loadMeetingTypes(userId: string): MeetingType[] {
+  return sql<MeetingType>(`
+    select * from meetingTypes where userId = ${userId} order by active desc, durationMinutes, name
+  `).all();
+}
+
+/** @rpc */
+export function saveMeetingType(form: MeetingTypeForm): MeetingType[] {
+  let userId = session.getOrThrow("userId");
+  let name = form.name.trim();
+  let slug = slugify(form.slug || form.name);
+  let duration = Number(form.duration);
+  let buffer = Number(form.buffer);
+
+  let errors: Record<string, string[]> = {};
+  if (!name) {
+    errors.name = ["Give it a name"];
+  }
+
+  if (!slug) {
+    errors.slug = ["Use letters or numbers"];
+  }
+
+  if (!Number.isInteger(duration) || duration < 5 || duration > 480) {
+    errors.duration = ["Between 5 and 480 minutes"];
+  }
+
+  if (!Number.isInteger(buffer) || buffer < 0 || buffer > 240) {
+    errors.buffer = ["Between 0 and 240 minutes"];
+  }
+
+  let clash = !sql(`
+    select 1 from meetingTypes where userId = ${userId} and slug = ${slug} and id is distinct from ${form.id || null}::uuid
+  `).empty();
+
+  if (clash) {
+    errors.slug = ["You already have a meeting type at this link"];
+  }
+
+  if (Object.keys(errors).length) {
+    throw new ValidationError(errors);
+  }
+
+  if (form.id) {
+    sql(`
+      update meetingTypes
+         set name = ${name}, slug = ${slug}, description = ${form.description.trim()},
+             durationMinutes = ${duration}, bufferMinutes = ${buffer}, active = ${form.active}
+       where id = ${form.id} and userId = ${userId}
+    `);
+  } else {
+    sql(`
+      insert into meetingTypes (userId, name, slug, description, durationMinutes, bufferMinutes, active)
+           values (${userId}, ${name}, ${slug}, ${form.description.trim()}, ${duration}, ${buffer}, ${form.active})
+    `);
+  }
+
+  notifyHoursChanged(userId);
+
+  return loadMeetingTypes(userId);
+}
+
+function blankForm(): MeetingTypeForm {
+  return { id: "", name: "", slug: "", description: "", duration: "30", buffer: "10", active: true };
+}
+
+function toForm(t: MeetingType): MeetingTypeForm {
+  return {
+    id: t.id,
+    name: t.name,
+    slug: t.slug,
+    description: t.description,
+    duration: String(t.durationMinutes),
+    buffer: String(t.bufferMinutes),
+    active: t.active,
+  };
+}
+
+function onNew(view: TypesView) {
+  view.editing = "new";
+  view.form = blankForm();
+  view.errors = {};
+}
+
+function onEdit(view: TypesView, t: MeetingType) {
+  view.editing = t.id;
+  view.form = toForm(t);
+  view.errors = {};
+}
+
+function onName(view: TypesView) {
+  if (view.editing === "new") {
+    view.form.slug = slugify(view.form.name);
+  }
+}
+
+function onSave(view: TypesView, live: { types: MeetingType[] }) {
+  view.busy = true;
+  try {
+    live.types = saveMeetingType(view.form);
+    view.editing = "";
+    view.errors = {};
+  } catch (err: any) {
+    view.errors = err instanceof ValidationError && err.errors
+      ? err.errors as Record<string, string[]>
+      : { name: [err.message] };
+  }
+
+  view.busy = false;
+}
+
+function onToggle(t: MeetingType, live: { types: MeetingType[] }) {
+  live.types = saveMeetingType({ ...toForm(t), active: !t.active });
+}
+
+async function onCopy(view: TypesView, url: string, id: string) {
+  await navigator.clipboard.writeText(url);
+  view.copied = id;
+  setTimeout(() => view.copied = "", 1500);
+}
+
+<TypeForm (view: TypesView, live: { types: MeetingType[] }, host: Host)>
+  <form class="card-body stack" onsubmit={() => onSave(view, live)}>
+    <div class="field">
+      <label for="type-name">Name</label>
+      <input id="type-name" value={view.form.name} oninput={() => onName(view)} placeholder="Strategy session" class={[view.errors.name && "is-error"]} required>
+      <p e:if={view.errors.name} class="error">{view.errors.name?.[0]}</p>
+    </div>
+
+    <div class="field">
+      <label for="type-slug">Link</label>
+      <div class="row slug-field">
+        <span class="slug-prefix">/{host.slug}/</span>
+        <input id="type-slug" value={view.form.slug} class={[view.errors.slug && "is-error"]} spellcheck={false} autocapitalize="none">
+      </div>
+      <p e:if={view.errors.slug} class="error">{view.errors.slug?.[0]}</p>
+    </div>
+
+    <div class="field">
+      <label for="type-desc">Description</label>
+      <textarea id="type-desc" rows={3} value={view.form.description} placeholder="What the guest should expect"></textarea>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="field">
+        <label for="type-duration">Length</label>
+        <select id="type-duration" value={view.form.duration}>
+          <option e:for={d of DURATIONS} value={d.id}>{formatDuration(d.minutes)}</option>
+        </select>
+        <p e:if={view.errors.duration} class="error">{view.errors.duration?.[0]}</p>
+      </div>
+
+      <div class="field">
+        <label for="type-buffer">Buffer between meetings</label>
+        <select id="type-buffer" value={view.form.buffer}>
+          <option e:for={b of BUFFERS} value={b.id}>{b.minutes ? `${b.minutes} min` : "None"}</option>
+        </select>
+        <p e:if={view.errors.buffer} class="error">{view.errors.buffer?.[0]}</p>
+      </div>
+    </div>
+
+    <div class="row type-form-foot">
+      <label><input type="checkbox" checked={view.form.active}> Show on my booking page</label>
+      <div class="cluster is-sm">
+        <button type="button" class="is-ghost" onclick={() => view.editing = ""}>Cancel</button>
+        <button type="submit" class="is-primary" disabled={view.busy}>{view.editing === "new" ? "Create" : "Save"}</button>
+      </div>
+    </div>
+  </form>
+</TypeForm>
+
+<html lang="en" class="page-meeting-types" (
+  host: Host,
+  types: MeetingType[],
+  private live: { types: MeetingType[] } = { types },
+  private view: TypesView = { editing: "", form: blankForm(), errors: {}, busy: false, copied: "" },
+  private origin: { value: string } = { value: "" },
+) oninit={() => origin.value = location.origin}>
+  <head>
+    <title>Meeting types · slotnook</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <HostLayout active="meeting-types">
+      <div class="stack is-lg">
+        <div class="types-head row">
+          <div class="stack is-xs">
+            <h1>Meeting types</h1>
+            <p class="hint">Each one gets its own booking link.</p>
+          </div>
+          <button e:if={view.editing !== "new"} class="is-primary" onclick={() => onNew(view)}>New meeting type</button>
+        </div>
+
+        <div e:if={view.editing === "new"} class="card">
+          <div class="card-head"><h2 class="text-md">New meeting type</h2></div>
+          <TypeForm {view} {live} {host} />
+        </div>
+
+        <div e:for={t of live.types} class={["card", "type-card", !t.active && "is-off"]}>
+          <TypeForm e:if={view.editing === t.id} {view} {live} {host} />
+
+          <div e:else class="card-body type-view">
+            <div class="stack is-sm">
+              <div class="cluster is-sm">
+                <h2 class="type-title">{t.name}</h2>
+                <span e:if={!t.active} class="pill">Hidden</span>
+              </div>
+              <span class="type-facts">{formatDuration(t.durationMinutes)} · {t.bufferMinutes ? `${t.bufferMinutes} min buffer` : "No buffer"}</span>
+              <p e:if={t.description} class="type-desc">{t.description}</p>
+              <a class="type-url" href={`/${host.slug}/${t.slug}`} target="_blank">{origin.value}/{host.slug}/{t.slug}</a>
+            </div>
+
+            <div class="type-actions row">
+              <button class="is-sm is-ghost" onclick={() => onCopy(view, `${origin.value}/${host.slug}/${t.slug}`, t.id)}>{view.copied === t.id ? "Copied" : "Copy link"}</button>
+              <button class="is-sm is-ghost" onclick={() => onToggle(t, live)}>{t.active ? "Hide" : "Show"}</button>
+              <button class="is-sm" onclick={() => onEdit(view, t)}>Edit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </HostLayout>
+  </body>
+</html>

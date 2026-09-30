@@ -1,0 +1,18 @@
+@import "#app/shared/styles/page.css";
+
+.page-host-reschedule .reschedule-head h1 {
+  margin: 0;
+}
+
+.page-host-reschedule .reschedule-current {
+  gap: var(--space-2);
+  color: var(--ink-soft);
+}
+
+.page-host-reschedule .reschedule-body {
+  padding: var(--space-6);
+}
+
+.page-host-reschedule .reschedule-confirm {
+  max-width: 30rem;
+}

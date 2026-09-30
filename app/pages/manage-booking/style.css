@@ -1,0 +1,53 @@
+@import "#app/shared/styles/page.css";
+
+.page-manage-booking .manage-card {
+  display: grid;
+  grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+  overflow: hidden;
+}
+
+.page-manage-booking .manage-aside {
+  gap: var(--space-5);
+  padding: var(--space-8) var(--space-6);
+  border-right: 1px solid var(--rule);
+}
+
+.page-manage-booking .manage-main {
+  min-width: 0;
+  padding: var(--space-8);
+}
+
+.page-manage-booking .manage-main h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.page-manage-booking .manage-panel {
+  max-width: 30rem;
+}
+
+.page-manage-booking .manage-guest {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+@media (max-width: 48rem) {
+  .page-manage-booking .manage-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-manage-booking .manage-aside {
+    padding: var(--space-6) var(--space-5);
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .page-manage-booking .manage-main {
+    padding: var(--space-6) var(--space-5);
+  }
+}
+
+.page-manage-booking .manage-head {
+  justify-content: space-between;
+}

@@ -1,0 +1,66 @@
+import "./style.css";
+
+/**
+ * Every message a guest gets about a booking: confirmation, reschedule,
+ * cancellation and the reminder. They differ in the heading and intro, and in
+ * whether the booking can still be changed.
+ *
+ * @email
+ */
+<html (
+  heading: string,
+  intro: string,
+  meetingName: string,
+  hostName: string,
+  when: string,
+  zone: string,
+  duration: string,
+  note: string = "",
+  cancelled: boolean = false,
+  token: string = "",
+  bookAgainPath: string = "",
+)>
+  <body class="email booking-update">
+    <div class="email-wrap">
+      <p class="brand">slotnook</p>
+      <h1>{heading}</h1>
+      <p>{intro}</p>
+
+      <table class={["details", cancelled && "cancelled"]} role="presentation">
+        <tr>
+          <td class="label">What</td>
+          <td class="value">{meetingName} with {hostName}</td>
+        </tr>
+        <tr>
+          <td class="label">When</td>
+          <td class="value">{when}</td>
+        </tr>
+        <tr>
+          <td class="label">Time zone</td>
+          <td class="value">{zone}</td>
+        </tr>
+        <tr>
+          <td class="label">Length</td>
+          <td class="value">{duration}</td>
+        </tr>
+        <tr e:if={note}>
+          <td class="label">Your note</td>
+          <td class="value">{note}</td>
+        </tr>
+      </table>
+
+      <p e:if={!cancelled && token} class="actions">
+        <a class="primary" href={`/booking/${token}/reschedule`}>Reschedule</a>
+        <a href={`/booking/${token}/cancel`}>Cancel</a>
+      </p>
+
+      <p e:if={cancelled && bookAgainPath} class="actions">
+        <a class="primary" href={bookAgainPath}>Book another time</a>
+      </p>
+
+      <div class="email-footer">
+        <p>Sent by slotnook on behalf of {hostName}. The calendar invite is attached.</p>
+      </div>
+    </div>
+  </body>
+</html>

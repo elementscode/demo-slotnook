@@ -1,0 +1,74 @@
+import "./style.css";
+import type { Listener } from "@elements/app";
+import { redirect } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Booking, Host, MeetingType, SlotChange, hostReschedule } from "#app/shared/services/scheduling";
+import { HostLayout } from "#app/shared/templates/host-layout";
+import { SlotPicker, Pick } from "#app/shared/templates/slot-picker";
+import { formatShortDay, formatTime } from "#app/shared/lib/time";
+
+function onConfirm(booking: Booking, pick: Pick, state: { busy: boolean }) {
+  if (!pick.startsAt) {
+    return;
+  }
+
+  state.busy = true;
+  try {
+    hostReschedule(booking.id, pick.startsAt);
+    redirect("/bookings");
+  } catch (err: any) {
+    pick.startsAt = null;
+    pick.notice = err.message;
+    state.busy = false;
+  }
+}
+
+<html lang="en" class="page-host-reschedule" (
+  host: Host,
+  booking: Booking,
+  type: MeetingType,
+  slots: Date[],
+  listener: Listener<SlotChange>,
+  private pick: Pick = { startsAt: null, timeZone: host.timeZone, notice: "" },
+  private state: { busy: boolean } = { busy: false },
+)>
+  <head>
+    <title>Reschedule {booking.guestName} · slotnook</title>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <HostLayout active="bookings">
+      <div class="stack is-lg">
+        <div class="reschedule-head stack is-xs">
+          <a href="/bookings" class="text-sm">← Bookings</a>
+          <h1>Reschedule {type.name.toLowerCase()} with {booking.guestName}</h1>
+          <p class="reschedule-current">
+            Currently {formatShortDay(booking.startsAt, pick.timeZone)} at {formatTime(booking.startsAt, pick.timeZone)}.
+            {booking.guestName.split(" ")[0]} gets an email with the new time and an updated invite.
+          </p>
+        </div>
+
+        <div class="card reschedule-body stack is-lg">
+          <div class={["stack", pick.startsAt && "hidden"]}>
+            <p e:if={pick.notice} class="callout is-warning" role="status">{pick.notice}</p>
+            <SlotPicker meetingTypeId={type.id}
+                        durationMinutes={type.durationMinutes}
+                        bufferMinutes={type.bufferMinutes}
+                        {slots}
+                        {listener}
+                        {pick}
+                        rescheduleToken={booking.token} />
+          </div>
+
+          <div e:if={pick.startsAt} class="reschedule-confirm stack">
+            <h2 class="text-lg">Move to {formatShortDay(pick.startsAt!, pick.timeZone)} at {formatTime(pick.startsAt!, pick.timeZone)}?</h2>
+            <div class="cluster">
+              <button class="is-primary" disabled={state.busy} onclick={() => onConfirm(booking, pick, state)}>Move and email guest</button>
+              <button class="is-ghost" onclick={() => pick.startsAt = null}>Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </HostLayout>
+  </body>
+</html>

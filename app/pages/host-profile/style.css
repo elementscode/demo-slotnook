@@ -1,0 +1,60 @@
+@import "#app/shared/styles/page.css";
+
+.page-host-profile .host-card {
+  gap: var(--space-2);
+  text-align: center;
+  padding-block: var(--space-6) var(--space-8);
+}
+
+.page-host-profile .host-card h1 {
+  margin: 0;
+}
+
+.page-host-profile .host-avatar {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+  background: color-mix(in oklab, var(--accent) 14%, var(--bg));
+  color: var(--accent-deep);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-lg);
+}
+
+.page-host-profile .type-list {
+  gap: var(--space-3);
+}
+
+.page-host-profile .type-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 150ms ease, transform 150ms ease;
+}
+
+.page-host-profile .type-link:hover {
+  border-color: var(--accent);
+}
+
+.page-host-profile .type-link .card-body {
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.page-host-profile .type-name {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.page-host-profile .type-desc {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.page-host-profile .type-arrow {
+  flex: none;
+  color: var(--accent);
+}

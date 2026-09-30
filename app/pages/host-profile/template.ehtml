@@ -1,0 +1,45 @@
+import "./style.css";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Host, MeetingType } from "#app/shared/services/scheduling";
+import { PublicLayout } from "#app/shared/templates/public-layout";
+import { formatDuration, zoneName } from "#app/shared/lib/time";
+
+export function initials(name: string): string {
+  return name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+<html lang="en" class="page-host-profile" (host: Host, types: MeetingType[])>
+  <head>
+    <title>Book time with {host.name} · slotnook</title>
+    <meta name="description" content={`Pick a time to meet with ${host.name}. ${host.headline}`}>
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <PublicLayout width="is-form">
+      <div class="stack is-lg">
+        <div class="host-card stack">
+          <span class="host-avatar" aria-hidden="true">{initials(host.name)}</span>
+          <h1>{host.name}</h1>
+          <p e:if={host.headline} class="lede">{host.headline}</p>
+          <p class="hint">Based in {zoneName(host.timeZone)}. Times are shown in yours.</p>
+        </div>
+
+        <div e:if={types.length} class="type-list stack">
+          <a e:for={type of types} class="card type-link" href={`/${host.slug}/${type.slug}`}>
+            <div class="card-body row">
+              <div class="stack is-xs">
+                <h2 class="type-name">{type.name}</h2>
+                <p class="type-desc">{formatDuration(type.durationMinutes)}{type.description ? ` · ${type.description}` : ""}</p>
+              </div>
+              <svg class="type-arrow" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </a>
+        </div>
+
+        <div e:else class="callout">{host.name} has no meeting types open right now.</div>
+      </div>
+    </PublicLayout>
+  </body>
+</html>

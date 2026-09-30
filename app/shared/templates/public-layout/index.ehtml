@@ -1,0 +1,27 @@
+import "./style.css";
+
+<BrandMark>
+  <svg class="brand-mark" width="22" height="22" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <rect x="2" y="3" width="20" height="19" rx="4.5" fill="currentColor"/>
+    <rect x="6" y="1" width="2.5" height="5" rx="1.25" fill="currentColor"/>
+    <rect x="15.5" y="1" width="2.5" height="5" rx="1.25" fill="currentColor"/>
+    <rect x="6" y="10" width="12" height="8" rx="2" fill="var(--bg)"/>
+    <circle cx="14.5" cy="14" r="2" fill="currentColor"/>
+  </svg>
+</BrandMark>
+
+<PublicLayout (width: string = "")>
+  <div class="app public-app">
+    <header class="public-header">
+      <div class={["page-shell", width]}>
+        <a class="brand row" href="/"><BrandMark/> slotnook</a>
+      </div>
+    </header>
+
+    <main class={["page-shell", width, "public-main"]}>
+      <slot/>
+    </main>
+
+    <footer class="public-footer">Scheduling by slotnook</footer>
+  </div>
+</PublicLayout>

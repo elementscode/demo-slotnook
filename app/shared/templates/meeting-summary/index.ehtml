@@ -1,0 +1,48 @@
+import "./style.css";
+import { Host, MeetingType } from "#app/shared/services/scheduling";
+import { formatDuration, formatWhen, zoneName } from "#app/shared/lib/time";
+
+function initials(name: string): string {
+  return name.split(/\s+/).map((w) => w[0] ?? "").join("").slice(0, 2).toUpperCase();
+}
+
+function endOf(startsAt: Date, minutes: number): Date {
+  return new Date(startsAt.getTime() + minutes * 60_000);
+}
+
+<MeetingSummary (
+  host: Host,
+  type: MeetingType,
+  startsAt: Date | null = null,
+  timeZone: string = "",
+  struck: boolean = false,
+)>
+  <div class="meeting-summary stack">
+    <div class="summary-host row">
+      <span class="summary-avatar" aria-hidden="true">{initials(host.name)}</span>
+      <a href={`/${host.slug}`}>{host.name}</a>
+    </div>
+
+    <h1>{type.name}</h1>
+
+    <ul class="summary-facts stack">
+      <li class="row">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 4.5V8l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        {formatDuration(type.durationMinutes)}
+      </li>
+      <li e:if={startsAt} class="row">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M2 6.5h12M5.5 1.5v3M10.5 1.5v3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span class="summary-when">
+          <s e:if={struck}>{formatWhen(startsAt!, endOf(startsAt!, type.durationMinutes), timeZone)}</s>
+          <span e:else>{formatWhen(startsAt!, endOf(startsAt!, type.durationMinutes), timeZone)}</span>
+        </span>
+      </li>
+      <li e:if={startsAt} class="row">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M1.75 8h12.5M8 1.75c-2 2-2 10.5 0 12.5M8 1.75c2 2 2 10.5 0 12.5" fill="none" stroke="currentColor" stroke-width="1.25"/></svg>
+        {zoneName(timeZone)}
+      </li>
+    </ul>
+
+    <p e:if={type.description} class="summary-desc">{type.description}</p>
+  </div>
+</MeetingSummary>
