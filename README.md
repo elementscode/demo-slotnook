@@ -1,4 +1,4 @@
-![Slotnook, an appointment scheduling app built with Elements: a public booking page for a strategy session with a month calendar and the open times for one day, shown in the guest's own time zone.](POSTER_URL)
+![Slotnook, an appointment scheduling app built with Elements: a public booking page for a strategy session with a month calendar and the open times for one day, shown in the guest's own time zone.](https://elements.dev/demos/01a0f40a-56f5-7ef5-b1d1-beeab4e2ca36/poster?v=f36f514fb859)
 
 # Slotnook
 
@@ -6,7 +6,7 @@
 
 Meeting types, weekly hours and date overrides, booking pages shown in each guest's own time zone, and emailed calendar invites with reminders, reschedule and cancel.
 
-**Demo:** [Slotnook](TBD)
+**Demo:** [Slotnook](https://elements.dev/demos/01a0f40a-56f5-7ef5-b1d1-beeab4e2ca36)
 
 ## Agent specs
 
