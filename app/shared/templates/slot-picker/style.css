@@ -1,0 +1,142 @@
+@import "#app/shared/styles/page.css";
+
+.slot-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, 15rem);
+  gap: var(--space-8);
+  align-items: start;
+}
+
+.slot-calendar-head {
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.slot-calendar-head h3 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.slot-calendar {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: var(--space-1);
+  table-layout: fixed;
+}
+
+.slot-calendar th {
+  padding: var(--space-1) 0;
+  border: 0;
+  background: none;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--ink-dim);
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.slot-calendar td {
+  padding: 0;
+  border: 0;
+  text-align: center;
+}
+
+.slot-day {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 3rem;
+  margin-inline: auto;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-dim);
+}
+
+button.slot-day {
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-weight: var(--weight-semibold);
+}
+
+button.slot-day:hover {
+  background: color-mix(in oklab, var(--accent) 22%, var(--bg));
+}
+
+button.slot-day.is-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.slot-times {
+  gap: var(--space-2);
+}
+
+.slot-times h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-base);
+}
+
+.slot-times-list {
+  gap: var(--space-2);
+  max-height: 26rem;
+  overflow-y: auto;
+  padding-right: var(--space-1);
+}
+
+.slot-time {
+  flex: none;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+  border-color: color-mix(in oklab, var(--accent) 45%, var(--rule));
+  color: var(--accent-deep);
+  font-weight: var(--weight-semibold);
+  transition: opacity 400ms ease, transform 400ms ease;
+}
+
+.slot-time.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.slot-time.is-leaving {
+  opacity: 0;
+  transform: scale(0.96);
+  pointer-events: none;
+}
+
+.slot-zone {
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.slot-zone select {
+  max-width: 18rem;
+}
+
+.slot-empty {
+  color: var(--ink-soft);
+}
+
+@media (max-width: 48rem) {
+  .slot-picker {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+  }
+
+  .slot-times-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-height: none;
+    overflow: visible;
+  }
+}

@@ -1,0 +1,159 @@
+import "./style.css";
+import type { Listener } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { Booking, Host, MeetingType, SlotChange, guestCancel, guestReschedule } from "#app/shared/services/scheduling";
+import { PublicLayout } from "#app/shared/templates/public-layout";
+import { MeetingSummary } from "#app/shared/templates/meeting-summary";
+import { SlotPicker, Pick } from "#app/shared/templates/slot-picker";
+import { formatShortDay, formatTime } from "#app/shared/lib/time";
+
+export type Mode = "view" | "reschedule" | "cancel";
+
+interface ManageState {
+  mode: Mode;
+  status: "confirmed" | "cancelled";
+  startsAt: Date;
+  message: string;
+  error: string;
+  busy: boolean;
+}
+
+function onCancel(booking: Booking, state: ManageState) {
+  state.busy = true;
+  try {
+    guestCancel(booking.token);
+    state.status = "cancelled";
+    state.mode = "view";
+    state.message = "Your booking is cancelled. A confirmation is on its way to your inbox.";
+    state.error = "";
+  } catch (err: any) {
+    state.error = err.message;
+  }
+
+  state.busy = false;
+}
+
+function onReschedule(booking: Booking, state: ManageState, pick: Pick) {
+  if (!pick.startsAt) {
+    return;
+  }
+
+  state.busy = true;
+  try {
+    guestReschedule(booking.token, pick.startsAt);
+    state.startsAt = new Date(pick.startsAt.getTime());
+    state.mode = "view";
+    state.message = "Your booking has a new time. We emailed you an updated invite.";
+    state.error = "";
+    pick.startsAt = null;
+  } catch (err: any) {
+    pick.startsAt = null;
+    pick.notice = err.message;
+  }
+
+  state.busy = false;
+}
+
+<html lang="en" class="page-manage-booking" (
+  booking: Booking,
+  host: Host,
+  type: MeetingType,
+  slots: Date[],
+  listener: Listener<SlotChange>,
+  mode: Mode,
+  private state: ManageState = {
+    mode: booking.status === "confirmed" && booking.startsAt > new Date() ? mode : "view",
+    status: booking.status,
+    startsAt: booking.startsAt,
+    message: "",
+    error: "",
+    busy: false,
+  },
+  private pick: Pick = { startsAt: null, timeZone: booking.guestTimeZone, notice: "" },
+)>
+  <head>
+    <title>Your booking with {host.name} · slotnook</title>
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <PublicLayout>
+      <div class="card manage-card">
+        <aside class="manage-aside stack">
+          <div>
+            <span e:if={state.status === "cancelled"} class="pill is-danger"><span class="pill-dot"></span>Cancelled</span>
+            <span e:elseif={state.startsAt < new Date()} class="pill"><span class="pill-dot"></span>Past</span>
+            <span e:else class="pill is-success"><span class="pill-dot"></span>Confirmed</span>
+          </div>
+          <MeetingSummary {host} {type} startsAt={state.startsAt} timeZone={pick.timeZone} struck={state.status === "cancelled"} />
+          <p class="manage-guest">Booked by {booking.guestName} · {booking.guestEmail}</p>
+        </aside>
+
+        <div class="manage-main">
+          <div e:switch={state.mode}>
+            <div e:case="reschedule" class="stack is-lg">
+              <div class={["stack", pick.startsAt && "hidden"]}>
+                <div class="row manage-head">
+                  <h2>Pick a new time</h2>
+                  <button class="is-ghost is-sm" onclick={() => state.mode = "view"}>Keep current time</button>
+                </div>
+                <p e:if={pick.notice} class="callout is-warning" role="status">{pick.notice}</p>
+                <SlotPicker meetingTypeId={type.id}
+                            durationMinutes={type.durationMinutes}
+                            bufferMinutes={type.bufferMinutes}
+                            {slots}
+                            {listener}
+                            {pick}
+                            rescheduleToken={booking.token} />
+              </div>
+
+              <div e:if={pick.startsAt} class="manage-panel stack">
+                <h2>Move your booking?</h2>
+                <p>From <s>{formatShortDay(state.startsAt, pick.timeZone)} at {formatTime(state.startsAt, pick.timeZone)}</s><br>
+                   to <strong>{formatShortDay(pick.startsAt!, pick.timeZone)} at {formatTime(pick.startsAt!, pick.timeZone)}</strong></p>
+                <div class="cluster">
+                  <button class="is-primary" disabled={state.busy} onclick={() => onReschedule(booking, state, pick)}>Confirm new time</button>
+                  <button class="is-ghost" onclick={() => pick.startsAt = null}>Back</button>
+                </div>
+              </div>
+            </div>
+
+            <div e:case="cancel" class="manage-panel stack">
+              <h2>Cancel this booking?</h2>
+              <p>{host.name} will see the time as free again and you will get a cancellation for your calendar.</p>
+              <p e:if={state.error} class="error" role="alert">{state.error}</p>
+              <div class="cluster">
+                <button class="is-danger" disabled={state.busy} onclick={() => onCancel(booking, state)}>Yes, cancel it</button>
+                <button class="is-ghost" onclick={() => state.mode = "view"}>Keep it</button>
+              </div>
+            </div>
+
+            <div e:default class="manage-panel stack">
+              <p e:if={state.message} class="callout is-success" role="status">{state.message}</p>
+
+              <div e:if={state.status === "cancelled"} class="stack">
+                <h2>This booking is cancelled</h2>
+                <p>Want to find another time with {host.name.split(" ")[0]}?</p>
+                <div><a class="button is-primary" href={`/${host.slug}/${type.slug}`}>Book again</a></div>
+              </div>
+
+              <div e:elseif={state.startsAt < new Date()} class="stack">
+                <h2>This meeting has passed</h2>
+                <div><a class="button is-primary" href={`/${host.slug}/${type.slug}`}>Book another</a></div>
+              </div>
+
+              <div e:else class="stack">
+                <h2>Need to change plans?</h2>
+                <p>Moving or cancelling is fine. {host.name.split(" ")[0]} gets the update right away.</p>
+                <div class="cluster">
+                  <button class="is-primary" onclick={() => state.mode = "reschedule"}>Reschedule</button>
+                  <button class="is-danger is-ghost" onclick={() => state.mode = "cancel"}>Cancel booking</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </PublicLayout>
+  </body>
+</html>

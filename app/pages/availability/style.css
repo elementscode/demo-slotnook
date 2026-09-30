@@ -1,0 +1,112 @@
+@import "#app/shared/styles/page.css";
+
+.page-availability h1 {
+  margin: 0;
+}
+
+.page-availability .card-head h2 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.page-availability .card-head p {
+  margin: var(--space-1) 0 0;
+}
+
+.page-availability .day-row {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  padding-block: var(--space-3);
+}
+
+.page-availability .day-row + .day-row {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.page-availability .day-toggle {
+  gap: var(--space-2);
+  min-height: 2rem;
+  font-weight: var(--weight-medium);
+}
+
+.page-availability .day-off {
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  color: var(--ink-dim);
+  font-size: var(--text-sm);
+}
+
+.page-availability .window {
+  gap: var(--space-2);
+}
+
+.page-availability .window input[type="time"] {
+  width: 8.5rem;
+}
+
+.page-availability .window-dash {
+  color: var(--ink-dim);
+}
+
+.page-availability .icon-button {
+  width: 2rem;
+  padding: 0;
+}
+
+.page-availability .save-row {
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.page-availability .saved {
+  color: var(--success-ink);
+  font-size: var(--text-sm);
+}
+
+.page-availability .override-row {
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+
+.page-availability .override-row + .override-row {
+  border-top: 1px solid var(--rule-soft);
+}
+
+.page-availability .override-date {
+  font-weight: var(--weight-medium);
+}
+
+.page-availability .override-hours {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.page-availability .override-form {
+  align-items: end;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.page-availability .override-form .field {
+  margin: 0;
+}
+
+@media (max-width: 48rem) {
+  .page-availability .day-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}
+
+.page-availability .availability-col {
+  max-width: var(--container-2xl);
+}
+
+.page-availability .all-day {
+  min-height: 2.5rem;
+}

@@ -1,0 +1,112 @@
+import "./style.css";
+import { redirect } from "@elements/app";
+import favicon from "#app/shared/assets/favicons/favicon.svg";
+import { signin } from "#app/shared/services/auth";
+import { PublicLayout } from "#app/shared/templates/public-layout";
+import { zoneName } from "#app/shared/lib/time";
+
+export const DEMO_PASSWORD = "slotnook-demo";
+
+export interface DemoLogin {
+  id: string;
+  name: string;
+  email: string;
+  headline: string;
+  timeZone: string;
+}
+
+interface SigninForm {
+  email: string;
+  password: string;
+  error: string;
+  busy: boolean;
+}
+
+function onSubmit(form: SigninForm) {
+  form.busy = true;
+  try {
+    signin(form.email, form.password);
+    form.error = "";
+    redirect("/bookings");
+  } catch (err: any) {
+    form.error = err.message;
+    form.busy = false;
+  }
+}
+
+function useDemo(form: SigninForm, login: DemoLogin, password: string) {
+  form.email = login.email;
+  form.password = password;
+  onSubmit(form);
+}
+
+<html lang="en" class="page-signin" (
+  demo: DemoLogin[],
+  password: string,
+  private form: SigninForm = { email: "", password: "", error: "", busy: false },
+)>
+  <head>
+    <title>Sign in · slotnook</title>
+    <meta name="description" content="Sign in to manage your slotnook booking pages.">
+    <link rel="icon" type="image/svg+xml" href={favicon} />
+  </head>
+  <body>
+    <PublicLayout width="is-form">
+      <div class="auth-grid">
+        <div class="auth-intro stack is-xs">
+          <h1>Sign in</h1>
+          <p class="lede">Manage your meeting types, hours and bookings.</p>
+        </div>
+
+        <form class="card stack card-body" onsubmit={() => onSubmit(form)}>
+          <p e:if={form.error} class="error" role="alert">{form.error}</p>
+
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email"
+                   name="email"
+                   type="email"
+                   value={form.email}
+                   autocomplete="email"
+                   autocapitalize="none"
+                   spellcheck={false}
+                   placeholder="you@example.com"
+                   required>
+          </div>
+
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password"
+                   name="password"
+                   type="password"
+                   value={form.password}
+                   autocomplete="current-password"
+                   required>
+          </div>
+
+          <button type="submit" class="is-primary is-block" disabled={form.busy}>Sign in</button>
+
+          <p class="hint">New here? <a href="/signup">Create a host account</a></p>
+        </form>
+
+        <section e:if={demo.length} class="card" aria-labelledby="demo-title">
+          <div class="card-head">
+            <h2 id="demo-title" class="text-md">Demo hosts</h2>
+          </div>
+
+          <div class="card-body">
+            <div e:for={login of demo} class="demo-host row">
+              <div class="stack is-xs">
+                <span class="demo-host-name">{login.name}</span>
+                <span class="demo-host-meta">{login.email}</span>
+                <span class="demo-host-meta">{zoneName(login.timeZone)}</span>
+              </div>
+              <button type="button" class="is-sm" disabled={form.busy} onclick={() => useDemo(form, login, password)}>Sign in</button>
+            </div>
+            <p class="demo-password">Password for both: <code>{password}</code></p>
+          </div>
+        </section>
+      </div>
+    </PublicLayout>
+  </body>
+</html>

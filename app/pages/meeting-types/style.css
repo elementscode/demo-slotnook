@@ -1,0 +1,90 @@
+@import "#app/shared/styles/page.css";
+
+.page-meeting-types .types-head {
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.page-meeting-types .types-head h1 {
+  margin: 0;
+}
+
+.page-meeting-types .type-card.is-off {
+  background: var(--bg-soft);
+}
+
+.page-meeting-types .type-card.is-off .type-title {
+  color: var(--ink-soft);
+}
+
+.page-meeting-types .type-view {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.page-meeting-types .type-title {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.page-meeting-types .type-facts {
+  font-size: var(--text-sm);
+  color: var(--ink-soft);
+}
+
+.page-meeting-types .type-desc {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.page-meeting-types .type-url {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.page-meeting-types .type-actions {
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.page-meeting-types .type-form-foot {
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.page-meeting-types .slug-field {
+  gap: 0;
+}
+
+.page-meeting-types .slug-prefix {
+  flex: none;
+  padding-inline: var(--space-3);
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--rule);
+  border-right: 0;
+  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
+  background: var(--bg-soft);
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.page-meeting-types .slug-field input {
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+@media (max-width: 48rem) {
+  .page-meeting-types .type-view {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .page-meeting-types .type-actions {
+    justify-content: flex-start;
+  }
+}

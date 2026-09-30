@@ -1,0 +1,51 @@
+@import "#app/shared/styles/email.css";
+
+.email.booking-update .brand {
+  margin: 0 0 24px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #0f766e;
+}
+
+.email.booking-update .details {
+  width: 100%;
+  margin: 20px 0 24px;
+  border-collapse: collapse;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+}
+
+.email.booking-update .details td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f0f2;
+  vertical-align: top;
+  font-size: 15px;
+}
+
+.email.booking-update .details td.label {
+  width: 96px;
+  color: #71717a;
+}
+
+.email.booking-update .cancelled td.value {
+  color: #71717a;
+  text-decoration: line-through;
+}
+
+.email.booking-update .actions a {
+  display: inline-block;
+  margin: 0 8px 8px 0;
+  padding: 10px 18px;
+  border-radius: 6px;
+  border: 1px solid #d4d4d8;
+  color: #18181b;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.email.booking-update .actions a.primary {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}

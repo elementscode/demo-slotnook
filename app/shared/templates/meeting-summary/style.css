@@ -1,0 +1,61 @@
+@import "#app/shared/styles/page.css";
+
+.meeting-summary {
+  gap: var(--space-3);
+}
+
+.meeting-summary .summary-host {
+  gap: var(--space-3);
+}
+
+.meeting-summary .summary-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+  font-weight: var(--weight-semibold);
+  font-size: var(--text-sm);
+}
+
+.meeting-summary .summary-host a {
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.meeting-summary h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.meeting-summary .summary-facts {
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-soft);
+  font-size: var(--text-sm);
+}
+
+.meeting-summary .summary-facts li {
+  gap: var(--space-2);
+}
+
+.meeting-summary .summary-facts svg {
+  flex: none;
+  color: var(--ink-dim);
+}
+
+.meeting-summary .summary-when {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.meeting-summary .summary-desc {
+  margin: 0;
+  color: var(--ink-soft);
+}

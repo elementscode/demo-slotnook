@@ -1,0 +1,32 @@
+@import "#app/shared/styles/page.css";
+
+.public-app {
+  background: var(--bg-soft);
+}
+
+.public-header {
+  padding-block: var(--space-5);
+}
+
+.public-header .brand {
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand-mark {
+  display: block;
+  color: var(--accent);
+}
+
+.public-main {
+  padding-block: var(--space-4) var(--space-16);
+}
+
+.public-footer {
+  padding-block: var(--space-6);
+  color: var(--ink-dim);
+  font-size: var(--text-sm);
+  text-align: center;
+}
