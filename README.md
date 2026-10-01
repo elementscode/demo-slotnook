@@ -29,12 +29,12 @@ Slotnook needed open slots computed from weekly hours and overrides, booking pag
 
 ### What Elements gave the app
 
-- **Live booking pages.** A `slotChanges` channel in `app/shared/services/scheduling.ts` tells every open booking page when a host's calendar changes. Pages listen before they read the slots, so a time another guest just took drops out of the picker on the spot.
-- **Server calls as function calls.** The booking page calls `@rpc` functions such as `fetchOpenSlots`, `bookSlot` and `guestReschedule` straight from the template, with types checked end to end. `bookSlot` locks the host's row inside a transaction, so each time goes to exactly one guest.
-- **Slots from SQL.** The first migration defines users, meeting types, weekly rules, date overrides and bookings, plus an `openSlots` SQL function that turns them into start times, buffers included. The second seeds two consultants, Maya in Los Angeles and Jonas in Berlin, with five meeting types, their weekly hours, a date override each, and past and upcoming bookings from guests in their own time zones.
-- **Email with calendar files.** `BookingEmailJob` in `app/jobs/booking-email.ts` renders the `booking-update` email template and attaches an invite built by `app/shared/lib/ics.ts`. A reschedule raises the event's sequence and a cancel sends a CANCEL file, so the guest's calendar follows along.
-- **Reminders on a schedule.** One line in `index.ts`, `app.cron("every 5m", ...)`, runs `SendRemindersJob`, which claims bookings starting within 24 hours and queues a reminder for each.
-- **Sessions.** Host pages share `currentHost` in `app/shared/services/host.ts`, and host rpcs such as `hostCancel` check that the booking belongs to the signed-in user.
+- **Booking pages that update live.** A channel tells every open booking page when a host's calendar changes, so a time another guest just took drops out of the picker on the spot.
+- **Booking as a function call.** The booking page calls `@rpc` functions to read open times, book, reschedule and cancel, with types checked from the page to the database. Booking locks the host inside a transaction, so each time goes to exactly one guest.
+- **Open times from SQL.** A migration defines meeting types, weekly hours, date overrides and bookings, plus a SQL function that turns them into open start times with buffers. A second migration seeds two consultants in Los Angeles and Berlin with five meeting types and bookings from guests in their own time zones.
+- **Invites by email.** Each confirmation, reschedule and cancellation is a background job that sends an email with a calendar file attached, so the guest's calendar follows every change.
+- **Reminders on a schedule.** One cron line runs a job every five minutes that sends a reminder for each booking starting within a day.
+- **Sessions.** Hosts sign in to manage their meeting types, hours and bookings, and every host action checks that the booking belongs to the signed-in user.
 
 ### What the project server gave the agent
 
@@ -43,8 +43,6 @@ The project server runs alongside the agent and answers as soon as a file is sav
 ### What shipped
 
 The app type-checks with zero errors and all 46 tests pass. Every page works on desktop and phone, and a time one guest books drops out of every other open booking page.
-
-Start in `app/shared/services/scheduling.ts`.
 
 ## Demo accounts
 
