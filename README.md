@@ -17,6 +17,12 @@ app.
 - **Time:** 21 min
 - **Cost:** $7.01 at API rates, September 2026
 
+## Get started
+
+```bash
+elements create slotnook -scaffold=elementscode/demo-slotnook
+```
+
 ## How it's built
 
 Slotnook needed open slots computed from weekly hours and overrides, booking pages that update while a guest is looking, emailed calendar invites, and reminders on a schedule. Each of those is a part of Elements, so the agent spent its 21 minutes on the scheduling itself.
@@ -35,12 +41,6 @@ Slotnook needed open slots computed from weekly hours and overrides, booking pag
 The agent ran 28 builds in 21 minutes. By the build's own timer, the median build finished in 11 milliseconds, so it checked its work after each edit and kept going. Along the way the build caught five type errors in two templates, among them a class binding that could be `false`, each pointed at its file and line. The agent read the manual for each part as it reached it, more than 40 pages from `html/templates` and `jobs` to `style/components/tabs`, then wrote 46 tests and screenshotted the sign-in, host and booking pages in a real browser.
 
 Start in `app/shared/services/scheduling.ts`.
-
-## Get started
-
-```bash
-elements create slotnook -scaffold=elementscode/demo-slotnook
-```
 
 ## Demo accounts
 
