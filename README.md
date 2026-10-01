@@ -38,7 +38,7 @@ Slotnook needed open slots computed from weekly hours and overrides, booking pag
 
 ### What the project server gave the agent
 
-The project server runs alongside the agent and answers as soon as a file is saved: it type-checks the templates, TypeScript and SQL, applies migrations and reruns the tests, so every question came back right away and the agent kept building. When the meeting types page passed a number where a string belonged, the next save named the problem and the line.
+The project server runs alongside the agent and answers as soon as a file is saved: it type-checks the templates, TypeScript and SQL, applies migrations and reruns the tests, so every question came back right away and the agent kept building.
 
 ### What shipped
 
