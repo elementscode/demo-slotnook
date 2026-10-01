@@ -30,10 +30,15 @@ Slotnook needed open slots computed from weekly hours and overrides, booking pag
 ### What Elements gave the app
 
 - **Booking pages that update live.** A channel tells every open booking page when a host's calendar changes, so a time another guest just took drops out of the picker on the spot.
+
 - **Booking as a function call.** The booking page calls `@rpc` functions to read open times, book, reschedule and cancel, with types checked from the page to the database. Booking locks the host inside a transaction, so each time goes to exactly one guest.
+
 - **Open times from SQL.** A migration defines meeting types, weekly hours, date overrides and bookings, plus a SQL function that turns them into open start times with buffers. A second migration seeds two consultants in Los Angeles and Berlin with five meeting types and bookings from guests in their own time zones.
+
 - **Invites by email.** Each confirmation, reschedule and cancellation is a background job that sends an email with a calendar file attached, so the guest's calendar follows every change.
+
 - **Reminders on a schedule.** One cron line runs a job every five minutes that sends a reminder for each booking starting within a day.
+
 - **Sessions.** Hosts sign in to manage their meeting types, hours and bookings, and every host action checks that the booking belongs to the signed-in user.
 
 ### What the project server gave the agent
