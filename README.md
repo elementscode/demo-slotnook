@@ -36,9 +36,13 @@ Slotnook needed open slots computed from weekly hours and overrides, booking pag
 - **Reminders on a schedule.** One line in `index.ts`, `app.cron("every 5m", ...)`, runs `SendRemindersJob`, which claims bookings starting within 24 hours and queues a reminder for each.
 - **Sessions.** Host pages share `currentHost` in `app/shared/services/host.ts`, and host rpcs such as `hostCancel` check that the booking belongs to the signed-in user.
 
-### What the agent got from the tooling
+### What the project server gave the agent
 
-The agent ran 28 builds in 21 minutes. It checked its work after each edit and kept going. Along the way the build caught five type errors in two templates, among them a class binding that could be `false`, each pointed at its file and line. The agent read the manual for each part as it reached it, more than 40 pages from `html/templates` and `jobs` to `style/components/tabs`, then wrote 46 tests and screenshotted the sign-in, host and booking pages in a real browser.
+The project server runs alongside the agent and answers as soon as a file is saved: it type-checks the templates, TypeScript and SQL, applies migrations and reruns the tests, so every question came back right away and the agent kept building. When the meeting types page passed a number where a string belonged, the next save named the problem and the line.
+
+### What shipped
+
+The app type-checks with zero errors and all 46 tests pass. Every page was checked on desktop and phone before publishing, and the repo was installed fresh from GitHub and run before the demo went live.
 
 Start in `app/shared/services/scheduling.ts`.
 
