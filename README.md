@@ -38,7 +38,7 @@ Slotnook needed open slots computed from weekly hours and overrides, booking pag
 
 ### What the agent got from the tooling
 
-The agent ran 28 builds in 21 minutes. By the build's own timer, the median build finished in 11 milliseconds, so it checked its work after each edit and kept going. Along the way the build caught five type errors in two templates, among them a class binding that could be `false`, each pointed at its file and line. The agent read the manual for each part as it reached it, more than 40 pages from `html/templates` and `jobs` to `style/components/tabs`, then wrote 46 tests and screenshotted the sign-in, host and booking pages in a real browser.
+The agent ran 28 builds in 21 minutes. It checked its work after each edit and kept going. Along the way the build caught five type errors in two templates, among them a class binding that could be `false`, each pointed at its file and line. The agent read the manual for each part as it reached it, more than 40 pages from `html/templates` and `jobs` to `style/components/tabs`, then wrote 46 tests and screenshotted the sign-in, host and booking pages in a real browser.
 
 Start in `app/shared/services/scheduling.ts`.
 
