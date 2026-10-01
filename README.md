@@ -42,7 +42,7 @@ The project server runs alongside the agent and answers as soon as a file is sav
 
 ### What shipped
 
-The app type-checks with zero errors and all 46 tests pass. Every page was checked on desktop and phone before publishing.
+The app type-checks with zero errors and all 46 tests pass. Every page works on desktop and phone, and a time one guest books drops out of every other open booking page.
 
 Start in `app/shared/services/scheduling.ts`.
 
