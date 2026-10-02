@@ -10,9 +10,6 @@ Meeting types, weekly hours and date overrides, booking pages shown in each gues
 
 ## Agent specs
 
-What one run of the prompt below took, from an empty Elements project to this
-app.
-
 - **Agent:** Claude Code, Opus 5.5 Medium
 - **Time:** 21 min
 - **Cost:** $7.01 at API rates, September 2026
@@ -65,30 +62,7 @@ Booking pages need no account: open `/maya/strategy` or `/jonas/discovery`
 and times show in your own time zone. In development, emails (with their
 `.ics` invites) are written to `.elements/logs/job.log` instead of being sent.
 
-## The prompt
-
-```text
-Build an appointment scheduling app named slotnook, for consultants to share a
-booking page.
-
-HOST (accounts)
-- Meeting types: name, length, description, buffer between meetings.
-- Weekly availability, date overrides, and a time zone.
-- A public booking page per meeting type.
-- Upcoming and past bookings. Cancel or reschedule, which emails the guest.
-
-GUEST (no account)
-- Pick a day and an open time, shown in their own time zone.
-- Enter name, email and a note, and book.
-- Get a confirmation email with a calendar invite (.ics) and links to
-  reschedule or cancel.
-- A reminder email 24 hours before.
-
-Seed two hosts in different time zones with meeting types, availability and
-upcoming bookings. Show the seeded logins on the sign-in page.
-
-Booked slots disappear from open booking pages in real time.
-```
+**Demo:** [Slotnook](https://elements.dev/demos/01a0f40a-56f5-7ef5-b1d1-beeab4e2ca36)
 
 ## License
 
