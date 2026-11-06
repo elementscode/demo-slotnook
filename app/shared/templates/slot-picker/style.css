@@ -5,7 +5,7 @@
   align-items: start;
 }
 
-/* Day cells at the old 3rem, smaller when the column is narrow. */
+/* Day cells 3rem wide, smaller when the column is narrow. */
 .slot-calendar-wrap {
   container-type: inline-size;
 }
@@ -17,7 +17,7 @@
   padding: 0;
 }
 
-/* Days with open times wear the brand tint, as the booking page always has. */
+/* Days with open times wear the brand tint. */
 .slot-calendar .calendar-day[data-modifiers~="open"]:not([data-selected]) > .calendar-day-button {
   background: var(--accent-soft);
   color: var(--accent-deep);
