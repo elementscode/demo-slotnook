@@ -1,5 +1,15 @@
 import "./style.css";
 import { session, sql, ValidationError } from "@elements/app";
+import { Badge } from "@elements/ui/badge";
+import { Button } from "@elements/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@elements/ui/card";
+import { Checkbox } from "@elements/ui/checkbox";
+import { Field } from "@elements/ui/field";
+import { Input } from "@elements/ui/input";
+import { InputGroup, InputGroupAddon, InputGroupText } from "@elements/ui/input-group";
+import { Label } from "@elements/ui/label";
+import { NativeSelect } from "@elements/ui/native-select";
+import { Textarea } from "@elements/ui/textarea";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Host, MeetingType, notifyHoursChanged } from "#app/shared/services/scheduling";
 import { slugify } from "#app/shared/services/auth";
@@ -26,6 +36,9 @@ interface TypesView {
 
 export const DURATIONS = [15, 20, 30, 45, 60, 90, 120].map((m) => ({ id: String(m), minutes: m }));
 export const BUFFERS = [0, 5, 10, 15, 30, 60].map((m) => ({ id: String(m), minutes: m }));
+
+const DURATION_OPTIONS = DURATIONS.map((d) => ({ value: d.id, label: formatDuration(d.minutes) }));
+const BUFFER_OPTIONS = BUFFERS.map((b) => ({ value: b.id, label: b.minutes ? `${b.minutes} min` : "None" }));
 
 export function loadMeetingTypes(userId: string): MeetingType[] {
   return sql<MeetingType>(`
@@ -149,50 +162,37 @@ async function onCopy(view: TypesView, url: string, id: string) {
 }
 
 <TypeForm (view: TypesView, live: { types: MeetingType[] }, host: Host)>
-  <form class="card-body stack" onsubmit={() => onSave(view, live)}>
-    <div class="field">
-      <label for="type-name">Name</label>
-      <input id="type-name" value={view.form.name} oninput={() => onName(view)} placeholder="Strategy session" class={[view.errors.name && "is-error"]} required>
-      <p e:if={view.errors.name} class="error">{view.errors.name?.[0]}</p>
-    </div>
+  <form class="type-form stack" onsubmit={() => onSave(view, live)}>
+    <Field label="Name" error={view.errors.name?.[0] ?? ""}>
+      <Input value={view.form.name} oninput={() => onName(view)} placeholder="Strategy session" required attrs={{ id: "type-name" }} />
+    </Field>
 
-    <div class="field">
-      <label for="type-slug">Link</label>
-      <div class="row slug-field">
-        <span class="slug-prefix">/{host.slug}/</span>
-        <input id="type-slug" value={view.form.slug} class={[view.errors.slug && "is-error"]} spellcheck={false} autocapitalize="none">
-      </div>
-      <p e:if={view.errors.slug} class="error">{view.errors.slug?.[0]}</p>
-    </div>
+    <Field label="Link" error={view.errors.slug?.[0] ?? ""}>
+      <InputGroup>
+        <InputGroupAddon><InputGroupText>/{host.slug}/</InputGroupText></InputGroupAddon>
+        <Input value={view.form.slug} attrs={{ id: "type-slug", spellcheck: "false", autocapitalize: "none" }} />
+      </InputGroup>
+    </Field>
 
-    <div class="field">
-      <label for="type-desc">Description</label>
-      <textarea id="type-desc" rows={3} value={view.form.description} placeholder="What the guest should expect"></textarea>
-    </div>
+    <Field label="Description">
+      <Textarea value={view.form.description} rows={3} placeholder="What the guest should expect" attrs={{ id: "type-desc" }} />
+    </Field>
 
     <div class="grid grid-cols-2 gap-4">
-      <div class="field">
-        <label for="type-duration">Length</label>
-        <select id="type-duration" value={view.form.duration}>
-          <option e:for={d of DURATIONS} value={d.id}>{formatDuration(d.minutes)}</option>
-        </select>
-        <p e:if={view.errors.duration} class="error">{view.errors.duration?.[0]}</p>
-      </div>
+      <Field label="Length" error={view.errors.duration?.[0] ?? ""}>
+        <NativeSelect value={view.form.duration} options={DURATION_OPTIONS} block attrs={{ id: "type-duration" }} />
+      </Field>
 
-      <div class="field">
-        <label for="type-buffer">Buffer between meetings</label>
-        <select id="type-buffer" value={view.form.buffer}>
-          <option e:for={b of BUFFERS} value={b.id}>{b.minutes ? `${b.minutes} min` : "None"}</option>
-        </select>
-        <p e:if={view.errors.buffer} class="error">{view.errors.buffer?.[0]}</p>
-      </div>
+      <Field label="Buffer between meetings" error={view.errors.buffer?.[0] ?? ""}>
+        <NativeSelect value={view.form.buffer} options={BUFFER_OPTIONS} block attrs={{ id: "type-buffer" }} />
+      </Field>
     </div>
 
     <div class="row type-form-foot">
-      <label><input type="checkbox" checked={view.form.active}> Show on my booking page</label>
+      <Label><Checkbox checked={view.form.active} /> Show on my booking page</Label>
       <div class="cluster is-sm">
-        <button type="button" class="is-ghost" onclick={() => view.editing = ""}>Cancel</button>
-        <button type="submit" class="is-primary" disabled={view.busy}>{view.editing === "new" ? "Create" : "Save"}</button>
+        <Button variant="ghost" onclick={() => view.editing = ""}>Cancel</Button>
+        <Button type="submit" variant="primary" loading={view.busy}>{view.editing === "new" ? "Create" : "Save"}</Button>
       </div>
     </div>
   </form>
@@ -217,22 +217,22 @@ async function onCopy(view: TypesView, url: string, id: string) {
             <h1>Meeting types</h1>
             <p class="hint">Each one gets its own booking link.</p>
           </div>
-          <button e:if={view.editing !== "new"} class="is-primary" onclick={() => onNew(view)}>New meeting type</button>
+          <Button e:if={view.editing !== "new"} variant="primary" onclick={() => onNew(view)}>New meeting type</Button>
         </div>
 
-        <div e:if={view.editing === "new"} class="card">
-          <div class="card-head"><h2 class="text-md">New meeting type</h2></div>
-          <TypeForm {view} {live} {host} />
-        </div>
+        <Card e:if={view.editing === "new"}>
+          <CardHeader><CardTitle level={2}>New meeting type</CardTitle></CardHeader>
+          <CardContent><TypeForm {view} {live} {host} /></CardContent>
+        </Card>
 
-        <div e:for={t of live.types} class={["card", "type-card", !t.active && "is-off"]}>
-          <TypeForm e:if={view.editing === t.id} {view} {live} {host} />
+        <Card e:for={t of live.types} class={t.active ? "type-card" : "type-card is-off"}>
+          <CardContent e:if={view.editing === t.id}><TypeForm {view} {live} {host} /></CardContent>
 
-          <div e:else class="card-body type-view">
+          <CardContent e:else class="type-view">
             <div class="stack is-sm">
               <div class="cluster is-sm">
                 <h2 class="type-title">{t.name}</h2>
-                <span e:if={!t.active} class="pill">Hidden</span>
+                <Badge e:if={!t.active} variant="secondary">Hidden</Badge>
               </div>
               <span class="type-facts">{formatDuration(t.durationMinutes)} · {t.bufferMinutes ? `${t.bufferMinutes} min buffer` : "No buffer"}</span>
               <p e:if={t.description} class="type-desc">{t.description}</p>
@@ -240,12 +240,12 @@ async function onCopy(view: TypesView, url: string, id: string) {
             </div>
 
             <div class="type-actions row">
-              <button class="is-sm is-ghost" onclick={() => onCopy(view, `${origin.value}/${host.slug}/${t.slug}`, t.id)}>{view.copied === t.id ? "Copied" : "Copy link"}</button>
-              <button class="is-sm is-ghost" onclick={() => onToggle(t, live)}>{t.active ? "Hide" : "Show"}</button>
-              <button class="is-sm" onclick={() => onEdit(view, t)}>Edit</button>
+              <Button size="sm" variant="ghost" onclick={() => onCopy(view, `${origin.value}/${host.slug}/${t.slug}`, t.id)}>{view.copied === t.id ? "Copied" : "Copy link"}</Button>
+              <Button size="sm" variant="ghost" onclick={() => onToggle(t, live)}>{t.active ? "Hide" : "Show"}</Button>
+              <Button size="sm" onclick={() => onEdit(view, t)}>Edit</Button>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </HostLayout>
   </body>

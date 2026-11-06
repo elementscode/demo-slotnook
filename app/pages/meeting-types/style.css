@@ -57,28 +57,6 @@
   flex-wrap: wrap;
 }
 
-.page-meeting-types .slug-field {
-  gap: 0;
-}
-
-.page-meeting-types .slug-prefix {
-  flex: none;
-  padding-inline: var(--space-3);
-  align-self: stretch;
-  display: flex;
-  align-items: center;
-  border: 1px solid var(--rule);
-  border-right: 0;
-  border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  background: var(--bg-soft);
-  color: var(--ink-soft);
-  font-size: var(--text-sm);
-}
-
-.page-meeting-types .slug-field input {
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-}
-
 @media (max-width: 48rem) {
   .page-meeting-types .type-view {
     grid-template-columns: minmax(0, 1fr);
