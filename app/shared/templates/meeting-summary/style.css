@@ -1,5 +1,3 @@
-@import "#app/shared/styles/page.css";
-
 .meeting-summary {
   gap: var(--space-3);
 }
@@ -8,17 +6,10 @@
   gap: var(--space-3);
 }
 
-.meeting-summary .summary-avatar {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 2.5rem;
-  height: 2.5rem;
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent-deep);
-  font-weight: var(--weight-semibold);
-  font-size: var(--text-sm);
+/* The avatar's fallback in the brand tint. */
+.meeting-summary .brand-avatar {
+  --bg-muted: var(--accent-soft);
+  --ink-soft: var(--accent-deep);
 }
 
 .meeting-summary .summary-host a {

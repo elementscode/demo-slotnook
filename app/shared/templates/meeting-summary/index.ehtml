@@ -1,4 +1,5 @@
 import "./style.css";
+import { Avatar } from "@elements/ui/avatar";
 import { Host, MeetingType } from "#app/shared/services/scheduling";
 import { formatDuration, formatWhen, zoneName } from "#app/shared/lib/time";
 
@@ -19,7 +20,7 @@ function endOf(startsAt: Date, minutes: number): Date {
 )>
   <div class="meeting-summary stack">
     <div class="summary-host row">
-      <span class="summary-avatar" aria-hidden="true">{initials(host.name)}</span>
+      <Avatar class="brand-avatar" fallback={initials(host.name)} />
       <a href={`/${host.slug}`}>{host.name}</a>
     </div>
 
