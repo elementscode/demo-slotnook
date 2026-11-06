@@ -1,6 +1,13 @@
 import "./style.css";
 import type { Listener } from "@elements/app";
 import { session, sql } from "@elements/app";
+import { Alert } from "@elements/ui/alert";
+import { AlertDialog, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@elements/ui/alert-dialog";
+import { Badge } from "@elements/ui/badge";
+import { Button } from "@elements/ui/button";
+import { Card } from "@elements/ui/card";
+import { Empty, EmptyDescription } from "@elements/ui/empty";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@elements/ui/tabs";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Host, SlotChange, hostCancel } from "#app/shared/services/scheduling";
 import { HostLayout } from "#app/shared/templates/host-layout";
@@ -25,9 +32,10 @@ interface DayGroup {
   bookings: HostBooking[];
 }
 
+type Tab = "upcoming" | "past";
+
 interface BookingsView {
-  tab: "upcoming" | "past";
-  confirming: string;
+  tab: string;
   error: string;
   seen: string[];
 }
@@ -53,7 +61,7 @@ function isUpcoming(b: HostBooking): boolean {
   return b.status === "confirmed" && b.endsAt.getTime() > Date.now();
 }
 
-function groupByDay(bookings: HostBooking[], tab: BookingsView["tab"], timeZone: string): DayGroup[] {
+function groupByDay(bookings: HostBooking[], tab: Tab, timeZone: string): DayGroup[] {
   let list = tab === "upcoming"
     ? bookings.filter(isUpcoming)
     : bookings.filter((b) => !isUpcoming(b)).reverse();
@@ -72,6 +80,8 @@ function groupByDay(bookings: HostBooking[], tab: BookingsView["tab"], timeZone:
   return groups;
 }
 
+const TABS: Tab[] = ["upcoming", "past"];
+
 function countUpcoming(bookings: HostBooking[]): number {
   return bookings.filter(isUpcoming).length;
 }
@@ -86,11 +96,18 @@ function onCancel(b: HostBooking, view: BookingsView) {
   try {
     hostCancel(b.id);
     b.status = "cancelled";
-    view.confirming = "";
     view.error = "";
   } catch (err: any) {
     view.error = err.message;
   }
+}
+
+function statusVariant(b: HostBooking): "danger" | "success" | "secondary" {
+  if (b.status === "cancelled") {
+    return "danger";
+  }
+
+  return isUpcoming(b) ? "success" : "secondary";
 }
 
 function statusLabel(b: HostBooking): string {
@@ -106,7 +123,7 @@ function statusLabel(b: HostBooking): string {
   bookings: HostBooking[],
   listener: Listener<SlotChange>,
   private live: { bookings: HostBooking[] } = { bookings },
-  private view: BookingsView = { tab: "upcoming" as BookingsView["tab"], confirming: "", error: "", seen: [] },
+  private view: BookingsView = { tab: "upcoming", error: "", seen: [] },
 ) oninit={() => listener.on("notify", () => onChange(live, view))}>
   <head>
     <title>Bookings · slotnook</title>
@@ -122,26 +139,22 @@ function statusLabel(b: HostBooking): string {
           </div>
           <div class="share-link row">
             <span>Your page</span>
-            <a class="button is-sm" href={`/${host.slug}`} target="_blank">/{host.slug}</a>
+            <Button size="sm" href={`/${host.slug}`} attrs={{ target: "_blank" }}>/{host.slug}</Button>
           </div>
         </div>
 
-        <div class="tabs">
-          <div class="tab-list" role="tablist">
-            <button role="tab" aria-selected={view.tab === "upcoming"} class={["tab", view.tab === "upcoming" && "is-active"]} onclick={() => view.tab = "upcoming"}>
-              Upcoming <span class="pill">{countUpcoming(live.bookings)}</span>
-            </button>
-            <button role="tab" aria-selected={view.tab === "past"} class={["tab", view.tab === "past" && "is-active"]} onclick={() => view.tab = "past"}>
-              Past and cancelled
-            </button>
-          </div>
+        <Alert e:if={view.error} variant="danger" description={view.error} />
 
-          <div class="tab-panel stack is-lg" role="tabpanel">
-            <p e:if={view.error} class="error" role="alert">{view.error}</p>
+        <Tabs value={view.tab}>
+          <TabsList label="Bookings">
+            <TabsTrigger value="upcoming">Upcoming <Badge variant="secondary">{countUpcoming(live.bookings)}</Badge></TabsTrigger>
+            <TabsTrigger value="past">Past and cancelled</TabsTrigger>
+          </TabsList>
 
-            <div e:for={group of groupByDay(live.bookings, view.tab, host.timeZone)} class="day-group stack">
+          <TabsContent e:for={tab of TABS} value={tab} class="stack is-lg">
+            <div e:for={group of groupByDay(live.bookings, tab, host.timeZone)} class="day-group stack">
               <h2 class="day-label">{group.label}</h2>
-              <div class="card">
+              <Card>
                 <div e:for={b of group.bookings}
                      class={["booking-row", b.status === "cancelled" && "is-cancelled", view.seen.includes(b.id) && "is-new"]}>
                   <div class="booking-time">
@@ -152,7 +165,7 @@ function statusLabel(b: HostBooking): string {
                   <div class="booking-who stack">
                     <div class="cluster is-sm">
                       <strong>{b.guestName}</strong>
-                      <span class={["pill", b.status === "cancelled" ? "is-danger" : (isUpcoming(b) ? "is-success" : "")]}>{statusLabel(b)}</span>
+                      <Badge variant={statusVariant(b)}>{statusLabel(b)}</Badge>
                     </div>
                     <span class="booking-meta">{b.meetingName} · <a href={`mailto:${b.guestEmail}`}>{b.guestEmail}</a></span>
                     <span e:if={formatTime(b.startsAt, b.guestTimeZone) !== formatTime(b.startsAt, host.timeZone)} class="booking-meta">
@@ -162,25 +175,26 @@ function statusLabel(b: HostBooking): string {
                   </div>
 
                   <div e:if={isUpcoming(b)} class="booking-actions row">
-                    <div e:if={view.confirming === b.id} class="row gap-2">
-                      <button class="is-danger is-sm" onclick={() => onCancel(b, view)}>Cancel and email guest</button>
-                      <button class="is-ghost is-sm" onclick={() => view.confirming = ""}>Keep</button>
-                    </div>
-                    <div e:else class="row gap-2">
-                      <a class="button is-sm" href={`/bookings/${b.id}/reschedule`}>Reschedule</a>
-                      <button class="is-ghost is-sm" onclick={() => view.confirming = b.id}>Cancel</button>
-                    </div>
+                    <Button size="sm" href={`/bookings/${b.id}/reschedule`}>Reschedule</Button>
+                    <AlertDialog title={`Cancel ${b.guestName}'s booking?`}
+                                 description={`${formatDay(b.startsAt, host.timeZone)} at ${formatTime(b.startsAt, host.timeZone)}. The guest gets an email and the time opens up again.`}>
+                      <Button slot="trigger" variant="ghost" size="sm">Cancel</Button>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep</AlertDialogCancel>
+                        <AlertDialogAction variant="danger" onclick={() => onCancel(b, view)}>Cancel and email guest</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialog>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
 
-            <div e:if={groupByDay(live.bookings, view.tab, host.timeZone).length === 0} class="card empty">
-              <p e:if={view.tab === "upcoming"}>Nothing booked yet. Share <a href={`/${host.slug}`} target="_blank">your booking page</a> to get started.</p>
-              <p e:else>No past bookings yet.</p>
-            </div>
-          </div>
-        </div>
+            <Empty e:if={groupByDay(live.bookings, tab, host.timeZone).length === 0} variant="outline">
+              <EmptyDescription e:if={tab === "upcoming"}>Nothing booked yet. Share <a href={`/${host.slug}`} target="_blank">your booking page</a> to get started.</EmptyDescription>
+              <EmptyDescription e:else>No past bookings yet.</EmptyDescription>
+            </Empty>
+          </TabsContent>
+        </Tabs>
       </div>
     </HostLayout>
   </body>

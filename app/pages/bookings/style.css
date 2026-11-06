@@ -94,12 +94,6 @@
   text-decoration: line-through;
 }
 
-.page-bookings .empty {
-  padding: var(--space-10) var(--space-6);
-  text-align: center;
-  color: var(--ink-soft);
-}
-
 @media (max-width: 48rem) {
   .page-bookings .booking-row {
     grid-template-columns: minmax(0, 1fr);
