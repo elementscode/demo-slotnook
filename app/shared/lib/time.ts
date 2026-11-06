@@ -78,66 +78,6 @@ export function monthKey(day: string): string {
   return day.slice(0, 7);
 }
 
-/** Shifts a "2026-10" month key by `delta` months. */
-export function addMonths(month: string, delta: number): string {
-  let [y, m] = month.split("-").map(Number);
-  let d = new Date(Date.UTC(y, m - 1 + delta, 1));
-
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-/** "October 2026" */
-export function formatMonth(month: string): string {
-  let [y, m] = month.split("-").map(Number);
-
-  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" })
-    .format(new Date(Date.UTC(y, m - 1, 1)));
-}
-
-export interface CalendarDay {
-  id: string;
-  day: string;
-}
-
-export interface CalendarWeek {
-  id: string;
-  days: CalendarDay[];
-}
-
-/**
- * The weeks of a month, Sunday first. Days outside the month have an empty
- * `day`.
- */
-export function monthGrid(month: string): CalendarWeek[] {
-  if (!month) {
-    return [];
-  }
-
-  let [y, m] = month.split("-").map(Number);
-  let first = new Date(Date.UTC(y, m - 1, 1));
-  let daysInMonth = new Date(Date.UTC(y, m, 0)).getUTCDate();
-  let cells: CalendarDay[] = [];
-  for (let i = 0; i < first.getUTCDay(); i++) {
-    cells.push({ id: `${month}-lead-${i}`, day: "" });
-  }
-
-  for (let day = 1; day <= daysInMonth; day++) {
-    let key = `${month}-${String(day).padStart(2, "0")}`;
-    cells.push({ id: key, day: key });
-  }
-
-  while (cells.length % 7 !== 0) {
-    cells.push({ id: `${month}-trail-${cells.length}`, day: "" });
-  }
-
-  let weeks: CalendarWeek[] = [];
-  for (let i = 0; i < cells.length; i += 7) {
-    weeks.push({ id: cells[i].id, days: cells.slice(i, i + 7) });
-  }
-
-  return weeks;
-}
-
 export function formatDuration(minutes: number): string {
   if (minutes < 60) {
     return `${minutes} min`;
