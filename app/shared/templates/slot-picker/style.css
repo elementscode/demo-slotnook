@@ -5,7 +5,7 @@
   align-items: start;
 }
 
-/* The grid fills its column, up to the old 3rem days. */
+/* Day cells at the old 3rem, smaller when the column is narrow. */
 .slot-calendar-wrap {
   container-type: inline-size;
 }

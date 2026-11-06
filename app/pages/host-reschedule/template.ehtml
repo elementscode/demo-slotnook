@@ -1,6 +1,9 @@
 import "./style.css";
 import type { Listener } from "@elements/app";
 import { redirect } from "@elements/app";
+import { Alert } from "@elements/ui/alert";
+import { Button } from "@elements/ui/button";
+import { Card } from "@elements/ui/card";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Booking, Host, MeetingType, SlotChange, hostReschedule } from "#app/shared/services/scheduling";
 import { HostLayout } from "#app/shared/templates/host-layout";
@@ -48,9 +51,9 @@ function onConfirm(booking: Booking, pick: Pick, state: { busy: boolean }) {
           </p>
         </div>
 
-        <div class="card reschedule-body stack is-lg">
+        <Card class="reschedule-body stack is-lg">
           <div class={["stack", pick.startsAt && "hidden"]}>
-            <p e:if={pick.notice} class="callout is-warning" role="status">{pick.notice}</p>
+            <Alert e:if={pick.notice} variant="warning" role="status" description={pick.notice} />
             <SlotPicker meetingTypeId={type.id}
                         durationMinutes={type.durationMinutes}
                         bufferMinutes={type.bufferMinutes}
@@ -63,11 +66,11 @@ function onConfirm(booking: Booking, pick: Pick, state: { busy: boolean }) {
           <div e:if={pick.startsAt} class="reschedule-confirm stack">
             <h2 class="text-lg">Move to {formatShortDay(pick.startsAt!, pick.timeZone)} at {formatTime(pick.startsAt!, pick.timeZone)}?</h2>
             <div class="cluster">
-              <button class="is-primary" disabled={state.busy} onclick={() => onConfirm(booking, pick, state)}>Move and email guest</button>
-              <button class="is-ghost" onclick={() => pick.startsAt = null}>Back</button>
+              <Button variant="primary" loading={state.busy} onclick={() => onConfirm(booking, pick, state)}>Move and email guest</Button>
+              <Button variant="ghost" onclick={() => pick.startsAt = null}>Back</Button>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </HostLayout>
   </body>
