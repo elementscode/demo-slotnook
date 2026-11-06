@@ -1,5 +1,3 @@
-@import "#app/shared/styles/page.css";
-
 .public-app {
   background: var(--bg-soft);
 }

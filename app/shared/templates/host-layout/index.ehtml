@@ -1,5 +1,6 @@
 import "./style.css";
 import { session, redirect } from "@elements/app";
+import { Button } from "@elements/ui/button";
 import { signout } from "#app/shared/services/auth";
 import { BrandMark } from "#app/shared/templates/public-layout";
 
@@ -21,8 +22,8 @@ function onSignout() {
         </nav>
 
         <div class="host-account row">
-          <a class="host-public button is-ghost is-sm" href={`/${session.get("userSlug")}`} target="_blank">Your booking page</a>
-          <button class="is-sm" onclick={() => onSignout()}>Sign out</button>
+          <Button class="host-public" variant="ghost" size="sm" href={`/${session.get("userSlug")}`} attrs={{ target: "_blank" }}>Your booking page</Button>
+          <Button size="sm" onclick={() => onSignout()}>Sign out</Button>
         </div>
       </div>
     </header>

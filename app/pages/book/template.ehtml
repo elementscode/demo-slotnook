@@ -1,6 +1,13 @@
 import "./style.css";
 import type { Listener } from "@elements/app";
 import { ValidationError } from "@elements/app";
+import { Alert } from "@elements/ui/alert";
+import { Button } from "@elements/ui/button";
+import { Card } from "@elements/ui/card";
+import { Field, FieldLabel } from "@elements/ui/field";
+import { Icon } from "@elements/ui/icon";
+import { Input } from "@elements/ui/input";
+import { Textarea } from "@elements/ui/textarea";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Host, MeetingType, SlotChange, bookSlot } from "#app/shared/services/scheduling";
 import { PublicLayout } from "#app/shared/templates/public-layout";
@@ -78,28 +85,26 @@ function onBook(form: GuestForm, pick: Pick, type: MeetingType) {
   </head>
   <body>
     <PublicLayout>
-      <div class="card booking-card">
+      <Card class="booking-card">
         <aside class="booking-aside">
           <MeetingSummary {host} {type} startsAt={form.bookedAt ?? pick.startsAt} timeZone={pick.timeZone} />
         </aside>
 
         <div class="booking-main">
           <div e:if={form.token} class="booking-done stack">
-            <span class="booking-check" aria-hidden="true">
-              <svg width="22" height="22" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </span>
+            <span class="booking-check" aria-hidden="true"><Icon name="check" size={22} /></span>
             <h2>You're booked</h2>
             <p>A confirmation with a calendar invite is on its way to <strong>{form.guestEmail}</strong>. It has links to reschedule or cancel if plans change.</p>
             <div class="cluster">
-              <a class="button is-primary" href={`/booking/${form.token}`}>View booking</a>
-              <a class="button is-ghost" href={`/${host.slug}`}>More with {host.name.split(" ")[0]}</a>
+              <Button variant="primary" href={`/booking/${form.token}`}>View booking</Button>
+              <Button variant="ghost" href={`/${host.slug}`}>More with {host.name.split(" ")[0]}</Button>
             </div>
           </div>
 
           <div e:else class="stack is-lg">
             <div class={["stack", pick.startsAt && "hidden"]}>
               <h2>Pick a day and time</h2>
-              <p e:if={pick.notice} class="callout is-warning" role="status">{pick.notice}</p>
+              <Alert e:if={pick.notice} variant="warning" role="status" description={pick.notice} />
               <SlotPicker meetingTypeId={type.id}
                           durationMinutes={type.durationMinutes}
                           bufferMinutes={type.bufferMinutes}
@@ -113,41 +118,33 @@ function onBook(form: GuestForm, pick: Pick, type: MeetingType) {
 
               <div class="booking-picked row">
                 <span>{formatShortDay(pick.startsAt!, pick.timeZone)} at {formatTime(pick.startsAt!, pick.timeZone)}</span>
-                <button type="button" class="is-ghost is-sm" onclick={() => pick.startsAt = null}>Change</button>
+                <Button variant="ghost" size="sm" onclick={() => pick.startsAt = null}>Change</Button>
               </div>
 
-              <p e:if={form.error} class="error" role="alert">{form.error}</p>
+              <Alert e:if={form.error} variant="danger" description={form.error} />
 
-              <div class="field">
-                <label for="guest-name">Name</label>
-                <input id="guest-name" name="name" autocomplete="name" value={form.guestName} class={[form.errors.guestName && "is-error"]} required>
-                <p e:if={form.errors.guestName} class="error">{form.errors.guestName?.[0]}</p>
-              </div>
+              <Field label="Name" error={form.errors.guestName?.[0] ?? ""}>
+                <Input value={form.guestName} name="name" required attrs={{ id: "guest-name", autocomplete: "name" }} />
+              </Field>
 
-              <div class="field">
-                <label for="guest-email">Email</label>
-                <input id="guest-email"
+              <Field label="Email" error={form.errors.guestEmail?.[0] ?? ""}>
+                <Input value={form.guestEmail}
                        name="email"
                        type="email"
-                       autocomplete="email"
-                       autocapitalize="none"
-                       spellcheck={false}
-                       value={form.guestEmail}
-                       class={[form.errors.guestEmail && "is-error"]}
-                       required>
-                <p e:if={form.errors.guestEmail} class="error">{form.errors.guestEmail?.[0]}</p>
-              </div>
+                       required
+                       attrs={{ id: "guest-email", autocomplete: "email", autocapitalize: "none", spellcheck: "false" }} />
+              </Field>
 
-              <div class="field">
-                <label for="guest-note">Anything {host.name.split(" ")[0]} should know? <span class="text-ink-dim">(optional)</span></label>
-                <textarea id="guest-note" name="note" rows={3} value={form.guestNote}></textarea>
-              </div>
+              <Field>
+                <FieldLabel>Anything {host.name.split(" ")[0]} should know? <span class="text-ink-dim">(optional)</span></FieldLabel>
+                <Textarea value={form.guestNote} name="note" rows={3} attrs={{ id: "guest-note" }} />
+              </Field>
 
-              <button type="submit" class="is-primary is-lg" disabled={form.busy}>Confirm booking</button>
+              <Button type="submit" variant="primary" size="lg" loading={form.busy}>Confirm booking</Button>
             </form>
           </div>
         </div>
-      </div>
+      </Card>
     </PublicLayout>
   </body>
 </html>
