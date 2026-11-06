@@ -207,7 +207,7 @@ function monthBounds(slots: Slot[], timeZone: string): { first: string; last: st
                   timeZone={pick.timeZone}
                   disabled={closedDays(live.slots, pick.timeZone)}
                   modifiers={{ open: openDays(live.slots, pick.timeZone) }}
-                  onValueChange={() => pick.startsAt = null} />
+                  onSelect={() => pick.startsAt = null} />
 
         <div class="slot-zone stack is-xs">
           <Label htmlFor="slot-zone">Times shown in</Label>

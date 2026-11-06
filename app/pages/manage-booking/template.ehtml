@@ -42,10 +42,12 @@ function onReschedule(booking: Booking, state: ManageState, pick: Pick) {
     return;
   }
 
+  // The live slot feed can clear the pick while the move is in flight.
+  let startsAt = pick.startsAt;
   state.busy = true;
   try {
-    guestReschedule(booking.token, pick.startsAt);
-    state.startsAt = new Date(pick.startsAt.getTime());
+    guestReschedule(booking.token, startsAt);
+    state.startsAt = new Date(startsAt.getTime());
     state.mode = "view";
     state.message = "Your booking has a new time. We emailed you an updated invite.";
     state.error = "";

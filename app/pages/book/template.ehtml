@@ -31,18 +31,20 @@ function onBook(form: GuestForm, pick: Pick, type: MeetingType) {
     return;
   }
 
+  // The live slot feed can clear the pick while the booking is in flight.
+  let startsAt = pick.startsAt;
   form.busy = true;
   try {
     let result = bookSlot({
       meetingTypeId: type.id,
-      startsAt: pick.startsAt,
+      startsAt,
       guestName: form.guestName,
       guestEmail: form.guestEmail,
       guestNote: form.guestNote,
       guestTimeZone: pick.timeZone,
     });
 
-    form.bookedAt = pick.startsAt;
+    form.bookedAt = startsAt;
     form.token = result.token;
     form.errors = {};
     form.error = "";
