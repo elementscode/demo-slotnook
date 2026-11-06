@@ -4,6 +4,8 @@
 
 > Slotnook is a full-stack app built with Claude Code on Elements.
 
+Slotnook uses the `calm` theme from @elements/ui.
+
 Meeting types, weekly hours and date overrides, booking pages shown in each guest's own time zone, and emailed calendar invites with reminders, reschedule and cancel.
 
 [Run this app on your machine](https://elements.dev/demos/01a0f40a-56f5-7ef5-b1d1-beeab4e2ca36). Use this demo as inspiration, or as the starting point for your own app. Your agent creates a new app with this one as the scaffold, and you prompt it to add whatever features you want.
