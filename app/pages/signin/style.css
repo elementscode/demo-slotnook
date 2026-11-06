@@ -15,25 +15,6 @@
   margin: 0;
 }
 
-.page-signin .demo-host {
-  gap: var(--space-3);
-  justify-content: space-between;
-  padding-block: var(--space-3);
-}
-
-.page-signin .demo-host + .demo-host {
-  border-top: 1px solid var(--rule-soft);
-}
-
-.page-signin .demo-host-name {
-  font-weight: var(--weight-semibold);
-}
-
-.page-signin .demo-host-meta {
-  font-size: var(--text-sm);
-  color: var(--ink-soft);
-}
-
 .page-signin .demo-password {
   font-size: var(--text-sm);
   color: var(--ink-soft);
