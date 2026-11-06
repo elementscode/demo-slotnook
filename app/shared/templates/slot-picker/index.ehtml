@@ -1,12 +1,14 @@
 import "./style.css";
 import type { Listener } from "@elements/app";
+import { Button } from "@elements/ui/button";
+import { Calendar } from "@elements/ui/calendar";
+import { Empty } from "@elements/ui/empty";
+import { Label } from "@elements/ui/label";
+import { NativeSelect } from "@elements/ui/native-select";
 import { SlotChange, fetchOpenSlots } from "#app/shared/services/scheduling";
 import {
   dayKey,
   monthKey,
-  addMonths,
-  formatMonth,
-  monthGrid,
   formatDay,
   formatTime,
   zoneName,
@@ -32,7 +34,7 @@ interface PickerView {
   day: string;
 }
 
-const ZONES = allTimeZones().map((z) => ({ id: z, label: zoneName(z) }));
+const ZONES = allTimeZones().map((z) => ({ value: z, label: zoneName(z) }));
 
 export function toSlots(dates: Date[]): Slot[] {
   return dates.map((d) => ({ id: d.toISOString(), startsAt: d, leaving: false }));
@@ -140,9 +142,17 @@ function onSlotChange(change: SlotChange, view: PickerView, live: { slots: Slot[
   settle(view, live, pick);
 }
 
-function onPickDay(view: PickerView, pick: Pick, day: string) {
-  view.day = day;
-  pick.startsAt = null;
+/** Open days as a calendar matcher: true for a day with at least one open time. */
+function openDays(slots: Slot[], timeZone: string): (day: string) => boolean {
+  let days = slotsByDay(slots, timeZone);
+
+  return (day) => days.has(day);
+}
+
+function closedDays(slots: Slot[], timeZone: string): (day: string) => boolean {
+  let open = openDays(slots, timeZone);
+
+  return (day) => !open(day);
 }
 
 function onPickTime(pick: Pick, slot: Slot) {
@@ -179,58 +189,33 @@ function monthBounds(slots: Slot[], timeZone: string): { first: string; last: st
   private opts: PickerOptions = { meetingTypeId, durationMinutes, bufferMinutes, rescheduleToken },
 )>
   <div class="slot-picker-wrap" oninit={() => onInit(view, live, pick, listener, opts)}>
-    <div e:if={live.slots.length === 0} class="callout">
-      <p class="slot-empty">No open times in the next two months. Check back soon.</p>
-    </div>
+    <Empty e:if={live.slots.length === 0}
+           variant="outline"
+           description="No open times in the next two months. Check back soon." />
 
     <div e:else class="slot-picker">
       <div class="slot-calendar-wrap">
-        <div class="slot-calendar-head row">
-          <h3>{view.month ? formatMonth(view.month) : ""}</h3>
-          <div class="row gap-1">
-            <button class="is-ghost is-sm"
-                    aria-label="Previous month"
-                    disabled={!view.month || view.month <= monthBounds(live.slots, pick.timeZone).first}
-                    onclick={() => view.month = addMonths(view.month, -1)}>‹</button>
-            <button class="is-ghost is-sm"
-                    aria-label="Next month"
-                    disabled={!view.month || view.month >= monthBounds(live.slots, pick.timeZone).last}
-                    onclick={() => view.month = addMonths(view.month, 1)}>›</button>
-          </div>
-        </div>
-
-        <table class="slot-calendar">
-          <thead>
-            <tr>
-              <th scope="col">Sun</th>
-              <th scope="col">Mon</th>
-              <th scope="col">Tue</th>
-              <th scope="col">Wed</th>
-              <th scope="col">Thu</th>
-              <th scope="col">Fri</th>
-              <th scope="col">Sat</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr e:for={week of monthGrid(view.month)}>
-              <td e:for={cell of week.days}>
-                <button e:if={cell.day && slotsByDay(live.slots, pick.timeZone).has(cell.day)}
-                        type="button"
-                        class={["slot-day", view.day === cell.day && "is-active"]}
-                        aria-pressed={view.day === cell.day}
-                        aria-label={`${cell.day}, ${slotsByDay(live.slots, pick.timeZone).get(cell.day)?.length} open times`}
-                        onclick={() => onPickDay(view, pick, cell.day)}>{Number(cell.day.slice(8))}</button>
-                <span e:elseif={cell.day} class="slot-day">{Number(cell.day.slice(8))}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <Calendar class="slot-calendar"
+                  label="Pick a day"
+                  value={view.day}
+                  month={view.month}
+                  required
+                  weekStartsOn={0}
+                  showOutsideDays={false}
+                  startMonth={monthBounds(live.slots, pick.timeZone).first}
+                  endMonth={monthBounds(live.slots, pick.timeZone).last}
+                  timeZone={pick.timeZone}
+                  disabled={closedDays(live.slots, pick.timeZone)}
+                  modifiers={{ open: openDays(live.slots, pick.timeZone) }}
+                  onValueChange={() => pick.startsAt = null} />
 
         <div class="slot-zone stack is-xs">
-          <label for="slot-zone">Times shown in</label>
-          <select id="slot-zone" class="is-sm" value={pick.timeZone} onchange={() => onZone(view, live, pick)}>
-            <option e:for={z of ZONES} value={z.id}>{z.label}</option>
-          </select>
+          <Label htmlFor="slot-zone">Times shown in</Label>
+          <NativeSelect value={pick.timeZone}
+                        size="sm"
+                        options={ZONES}
+                        attrs={{ id: "slot-zone" }}
+                        onchange={() => onZone(view, live, pick)} />
         </div>
       </div>
 
@@ -238,10 +223,10 @@ function monthBounds(slots: Slot[], timeZone: string): { first: string; last: st
         <h3 e:if={view.day}>{formatDay((slotsByDay(live.slots, pick.timeZone).get(view.day) ?? [])[0]?.startsAt ?? new Date(), pick.timeZone)}</h3>
         <p class="hint">{live.slots[0] ? zoneAbbr(live.slots[0].startsAt, pick.timeZone) : ""} · {durationMinutes} min</p>
         <div class="slot-times-list stack">
-          <button e:for={slot of slotsByDay(live.slots, pick.timeZone).get(view.day) ?? []}
-                  type="button"
-                  class={["slot-time", pick.startsAt?.getTime() === slot.startsAt.getTime() && "is-active", slot.leaving && "is-leaving"]}
-                  onclick={() => onPickTime(pick, slot)}>{formatTime(slot.startsAt, pick.timeZone)}</button>
+          <Button e:for={slot of slotsByDay(live.slots, pick.timeZone).get(view.day) ?? []}
+                  block
+                  class={slot.leaving ? "slot-time is-leaving" : "slot-time"}
+                  onclick={() => onPickTime(pick, slot)}>{formatTime(slot.startsAt, pick.timeZone)}</Button>
         </div>
       </div>
     </div>
