@@ -1,5 +1,18 @@
 import "./style.css";
 import { session, sql, tx, ValidationError } from "@elements/app";
+import { Alert } from "@elements/ui/alert";
+import { Button } from "@elements/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@elements/ui/card";
+import { Checkbox } from "@elements/ui/checkbox";
+import { DatePicker } from "@elements/ui/date-picker";
+import { Field } from "@elements/ui/field";
+import { Icon } from "@elements/ui/icon";
+import { Item, ItemGroup, ItemContent, ItemTitle, ItemDescription, ItemActions } from "@elements/ui/item";
+import { Label } from "@elements/ui/label";
+import { NativeSelect } from "@elements/ui/native-select";
+import { Switch } from "@elements/ui/switch";
+import { TimePicker } from "@elements/ui/time-picker";
+import { toast } from "@elements/ui/toast";
 import favicon from "#app/shared/assets/favicons/favicon.svg";
 import { Host, notifyHoursChanged } from "#app/shared/services/scheduling";
 import { HostLayout } from "#app/shared/templates/host-layout";
@@ -35,7 +48,6 @@ export interface OverrideForm {
 
 interface HoursView {
   timeZone: string;
-  saved: string;
   error: string;
   busy: boolean;
 }
@@ -43,7 +55,7 @@ interface HoursView {
 // Monday first, the way a working week reads.
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-const ZONES = allTimeZones().map((z) => ({ id: z, label: zoneName(z) }));
+const ZONES = allTimeZones().map((z) => ({ value: z, label: zoneName(z) }));
 
 function newWindow(start: string, end: string): HoursWindow {
   return { id: crypto.randomUUID(), start, end };
@@ -166,8 +178,8 @@ export function removeOverride(date: string): Override[] {
   return loadOverrides(userId);
 }
 
-function onToggleDay(day: DayHours) {
-  if (day.on && day.windows.length === 0) {
+function onToggleDay(day: DayHours, on: boolean) {
+  if (on && day.windows.length === 0) {
     day.windows.push(newWindow("09:00", "17:00"));
   }
 }
@@ -192,11 +204,9 @@ function onSaveHours(view: HoursView, week: DayHours[]) {
   try {
     saveHours(view.timeZone, week);
     view.error = "";
-    view.saved = "Saved. Your booking pages already show the new hours.";
-    setTimeout(() => view.saved = "", 3000);
+    toast.success("Saved. Your booking pages already show the new hours.");
   } catch (err: any) {
     view.error = err.message;
-    view.saved = "";
   }
 
   view.busy = false;
@@ -253,7 +263,7 @@ function overrideDays(overrides: Override[]): OverrideDay[] {
   host: Host,
   week: DayHours[],
   overrides: Override[],
-  private view: HoursView = { timeZone: host.timeZone, saved: "", error: "", busy: false },
+  private view: HoursView = { timeZone: host.timeZone, error: "", busy: false },
   private live: { overrides: Override[]; error: string } = { overrides, error: "" },
   private overrideForm: OverrideForm = { date: "", allDay: true, start: "09:00", end: "12:00" },
 )>
@@ -269,96 +279,85 @@ function overrideDays(overrides: Override[]): OverrideDay[] {
           <p class="hint">When guests can book you. Buffers come from each meeting type.</p>
         </div>
 
-        <form class="card" onsubmit={() => onSaveHours(view, week)}>
-          <div class="card-head">
-            <h2>Weekly hours</h2>
-          </div>
+        <form onsubmit={() => onSaveHours(view, week)}>
+          <Card>
+            <CardHeader><CardTitle level={2}>Weekly hours</CardTitle></CardHeader>
 
-          <div class="card-body stack">
-            <div class="field">
-              <label for="tz">Time zone</label>
-              <select id="tz" value={view.timeZone}>
-                <option e:for={z of ZONES} value={z.id}>{z.label}</option>
-              </select>
-              <p class="hint">Your hours are in this zone. Guests see times in their own.</p>
-            </div>
+            <CardContent class="stack">
+              <Field label="Time zone" description="Your hours are in this zone. Guests see times in their own.">
+                <NativeSelect value={view.timeZone} options={ZONES} block attrs={{ id: "tz" }} />
+              </Field>
 
-            <div>
-              <div e:for={day of week} class="day-row">
-                <label class="day-toggle row">
-                  <input type="checkbox" checked={day.on} onchange={() => onToggleDay(day)}>
-                  {day.label}
-                </label>
+              <div>
+                <div e:for={day of week} class="day-row">
+                  <Label class="day-toggle"><Switch checked={day.on} onCheckedChange={(on) => onToggleDay(day, on)} /> {day.label}</Label>
 
-                <div e:if={day.on} class="stack is-sm">
-                  <div e:for={w of day.windows} class="window row">
-                    <input type="time" class="is-sm" value={w.start} aria-label={`${day.label} start`} step={900}>
-                    <span class="window-dash">–</span>
-                    <input type="time" class="is-sm" value={w.end} aria-label={`${day.label} end`} step={900}>
-                    <button type="button" class="is-ghost is-sm icon-button" aria-label="Remove these hours" onclick={() => onRemoveWindow(day, w)}>
-                      <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/></svg>
-                    </button>
+                  <div e:if={day.on} class="stack is-sm">
+                    <div e:for={w of day.windows} class="window row">
+                      <TimePicker value={w.start} size="sm" step={900} icon={false} label={`${day.label} start`} />
+                      <span class="window-dash">–</span>
+                      <TimePicker value={w.end} size="sm" step={900} icon={false} label={`${day.label} end`} />
+                      <Button variant="ghost" size="sm" icon label="Remove these hours" onclick={() => onRemoveWindow(day, w)}><Icon name="x" /></Button>
+                    </div>
+                    <div>
+                      <Button variant="ghost" size="sm" onclick={() => onAddWindow(day)}>+ Add hours</Button>
+                    </div>
                   </div>
-                  <div>
-                    <button type="button" class="is-ghost is-sm" onclick={() => onAddWindow(day)}>+ Add hours</button>
-                  </div>
+
+                  <span e:else class="day-off">Unavailable</span>
                 </div>
-
-                <span e:else class="day-off">Unavailable</span>
               </div>
-            </div>
-          </div>
 
-          <div class="card-foot row save-row">
-            <span e:if={view.error} class="error" role="alert">{view.error}</span>
-            <span e:if={view.saved} class="saved" role="status">{view.saved}</span>
-            <button type="submit" class="is-primary" disabled={view.busy}>Save hours</button>
-          </div>
+              <Alert e:if={view.error} variant="danger" description={view.error} />
+            </CardContent>
+
+            <CardFooter>
+              <Button type="submit" variant="primary" loading={view.busy}>Save hours</Button>
+            </CardFooter>
+          </Card>
         </form>
 
-        <section class="card">
-          <div class="card-head">
-            <h2>Date overrides</h2>
-            <p class="hint">Take a day off, or set different hours for one date.</p>
-          </div>
+        <Card>
+          <CardHeader>
+            <CardTitle level={2}>Date overrides</CardTitle>
+            <CardDescription>Take a day off, or set different hours for one date.</CardDescription>
+          </CardHeader>
 
-          <div class="card-body stack">
-            <div e:if={live.overrides.length}>
-              <div e:for={d of overrideDays(live.overrides)} class="override-row row">
-                <div class="stack is-xs">
-                  <span class="override-date">{d.label}</span>
-                  <span class="override-hours">{d.hours}</span>
-                </div>
-                <button class="is-ghost is-sm" onclick={() => onRemoveOverride(d.date, live)}>Remove</button>
-              </div>
-            </div>
+          <CardContent class="stack">
+            <ItemGroup e:if={live.overrides.length} label="Date overrides">
+              <Item e:for={d of overrideDays(live.overrides)} size="sm" class="override-row">
+                <ItemContent>
+                  <ItemTitle>{d.label}</ItemTitle>
+                  <ItemDescription>{d.hours}</ItemDescription>
+                </ItemContent>
+                <ItemActions>
+                  <Button variant="ghost" size="sm" onclick={() => onRemoveOverride(d.date, live)}>Remove</Button>
+                </ItemActions>
+              </Item>
+            </ItemGroup>
             <p e:else class="hint">No overrides. Your weekly hours apply every week.</p>
 
             <form class="override-form cluster" onsubmit={() => onAddOverride(overrideForm, live)}>
-              <div class="field">
-                <label for="override-date">Date</label>
-                <input id="override-date" type="date" value={overrideForm.date} required>
-              </div>
+              <Field label="Date" reserveError={false}>
+                <DatePicker value={overrideForm.date} required attrs={{ id: "override-date" }} />
+              </Field>
 
-              <div class="field">
-                <label for="override-kind">Hours</label>
-                <label class="all-day row gap-2">
-                  <input id="override-kind" type="checkbox" checked={overrideForm.allDay}> Unavailable all day
-                </label>
-              </div>
+              <Field label="Hours" reserveError={false}>
+                <Label class="all-day"><Checkbox checked={overrideForm.allDay} attrs={{ id: "override-kind" }} /> Unavailable all day</Label>
+              </Field>
 
               <div e:if={!overrideForm.allDay} class="window row">
-                <input type="time" value={overrideForm.start} aria-label="Override start" step={900}>
+                <TimePicker value={overrideForm.start} step={900} label="Override start" />
                 <span class="window-dash">–</span>
-                <input type="time" value={overrideForm.end} aria-label="Override end" step={900}>
+                <TimePicker value={overrideForm.end} step={900} label="Override end" />
               </div>
 
-              <button type="submit">Add override</button>
+              <Button type="submit">Add override</Button>
             </form>
 
-            <p e:if={live.error} class="error" role="alert">{live.error}</p>
-          </div>
-        </section>
+            <Alert e:if={live.error} variant="danger" description={live.error} />
+          </CardContent>
+        </Card>
       </div>
     </HostLayout>
   </body>

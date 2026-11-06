@@ -1,6 +1,7 @@
 import "./style.css";
 import { session, redirect } from "@elements/app";
 import { Button } from "@elements/ui/button";
+import { Toaster } from "@elements/ui/toast";
 import { signout } from "#app/shared/services/auth";
 import { BrandMark } from "#app/shared/templates/public-layout";
 
@@ -31,5 +32,7 @@ function onSignout() {
     <main class="page-shell host-main">
       <slot/>
     </main>
+
+    <Toaster richColors />
   </div>
 </HostLayout>
