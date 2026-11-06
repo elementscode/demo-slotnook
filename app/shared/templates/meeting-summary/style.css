@@ -6,10 +6,10 @@
   gap: var(--space-3);
 }
 
-/* The avatar's fallback in the brand tint. */
+/* The host's initials in the brand tint. */
 .meeting-summary .brand-avatar {
-  --bg-muted: var(--accent-soft);
-  --ink-soft: var(--accent-deep);
+  --avatar-fallback-bg: var(--accent-soft);
+  --avatar-fallback-ink: var(--accent-deep);
 }
 
 .meeting-summary .summary-host a {

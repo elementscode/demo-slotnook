@@ -10,11 +10,11 @@
   margin: 0;
 }
 
-/* The avatar's fallback in the brand tint, at the page's 4rem. */
+/* The host's initials in the brand tint, at portrait size. */
 .page-host-profile .host-avatar {
   --avatar-size: 4rem;
-  --bg-muted: color-mix(in oklab, var(--accent) 14%, var(--bg));
-  --ink-soft: var(--accent-deep);
+  --avatar-fallback-bg: color-mix(in oklab, var(--accent) 14%, var(--bg));
+  --avatar-fallback-ink: var(--accent-deep);
   margin-inline: auto;
 }
 
